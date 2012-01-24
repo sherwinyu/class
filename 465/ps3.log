@@ -1,0 +1,54 @@
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=latex 2011.9.22)  2 DEC 2011 20:36
+entering extended mode
+ %&-line parsing enabled.
+**ps3.tex
+(./ps3.tex
+LaTeX2e <2009/09/24>
+Babel <v3.8l> and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, loaded.
+(/usr/share/texmf-texlive/tex/latex/base/article.cls
+Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
+(/usr/share/texmf-texlive/tex/latex/base/size10.clo
+File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+
+! LaTeX Error: File `algorithmic.sty' not found.
+
+Type X to quit or <RETURN> to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: q
+
+! LaTeX Error: File `q.sty' not found.
+
+Type X to quit or <RETURN> to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: x
+
+ )
+(\end occurred when \ifx on line 3 was incomplete)
+(\end occurred when \ifx on line 3 was incomplete)
+(\end occurred when \ifx on line 3 was incomplete) 
+Here is how much of TeX's memory you used:
+ 201 strings out of 495062
+ 2123 string characters out of 1182644
+ 46245 words of memory out of 3000000
+ 3467 multiletter control sequences out of 15000+50000
+ 3640 words of font info for 14 fonts, out of 3000000 for 9000
+ 28 hyphenation exceptions out of 8191
+ 23i,1n,17p,158b,36s stack positions out of 5000i,500n,10000p,200000b,50000s
+
+No pages of output.
