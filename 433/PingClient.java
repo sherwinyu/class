@@ -12,12 +12,24 @@ public class PingClient
   String password = " ";
   DatagramSocket clientSocket;
 
-  public void parseArgs(String[] args) throws UnknownHostException {
-    hostAddress = InetAddress.getByName(args[0]);
-    port = Integer.parseInt(args[1]);
-    password = args[2];
-  }
+  public void parseArgs(String[] args) {
+    try {
+    if (args.length != 3)
+      throw new NumberFormatException("improper commandline arguments");
+      hostAddress = InetAddress.getByName(args[0]);
+      port = Integer.parseInt(args[1]);
+      password = args[2];
+    }
+    catch (NumberFormatException e) {
+      System.out.println("Usage: java PingClient <server address> <port> <server password>");
+      System.exit(0);
+    }
+    catch (UnknownHostException e) {
+      System.out.println("Host unknown.");
+      System.exit(0);
+    }
 
+  }
 
   public void ping (short sequenceNumber) throws IOException
   {
@@ -43,6 +55,8 @@ public class PingClient
               this.cancel();
               timer.cancel();
               printStats(RTTs);
+              System.out.println("Terminating.");
+              return;
             }
             try {
               long ts = System.currentTimeMillis();
@@ -81,7 +95,7 @@ public class PingClient
       if (l < minRTT)
         minRTT = l;
     }
-    System.out.println("Number of replies :" + RTTs.size());
+    System.out.println("Number of replies:" + RTTs.size());
     System.out.println("Min RTT:" + minRTT);
     System.out.println("Max RTT:" + maxRTT);
     System.out.println("Avg RTT:" + (double) sum / RTTs.size());
@@ -93,22 +107,8 @@ public class PingClient
     PingClient pc = new PingClient();
     pc.parseArgs(args);
     pc.clientSocket = new DatagramSocket();
-    sockStat(pc.clientSocket);
+    pc.pingTenTimes(1000);
 
-    pc.printStats(pc.pingTenTimes(1000));
-
-    System.out.println("Terminating.");
 
   } // end of main
-
-  public static void sockStat(DatagramSocket sock) throws Exception {
-    System.out.println( "Rcv buffer Size: " + sock.getReceiveBufferSize() );
-    System.out.println( "Snd buffer size: " + sock.getSendBufferSize() );
-    System.out.println( "Socket TO: " + sock.getSoTimeout() );
-
-    System.out.println( "Charset: " + java.nio.charset.Charset.defaultCharset() );
-
-  }
-
-
 }
