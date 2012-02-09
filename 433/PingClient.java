@@ -1,3 +1,5 @@
+// Author: Sherwin Yu
+// PingClient.java
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -13,9 +15,10 @@ public class PingClient
   DatagramSocket clientSocket;
 
   public void parseArgs(String[] args) {
+    //TODO(syu) code for handling differing arguments
     try {
-    if (args.length != 3)
-      throw new NumberFormatException("improper commandline arguments");
+      if (args.length != 3)
+        throw new NumberFormatException("improper commandline arguments");
       hostAddress = InetAddress.getByName(args[0]);
       port = Integer.parseInt(args[1]);
       password = args[2];
@@ -28,7 +31,6 @@ public class PingClient
       System.out.println("Host unknown.");
       System.exit(0);
     }
-
   }
 
   public void ping (short sequenceNumber) throws IOException
@@ -64,6 +66,7 @@ public class PingClient
               try {
                 DatagramPacket response = new DatagramPacket(new byte[1024], 1024);
                 clientSocket.receive(response);
+
                 PingMessage pm = PingMessage.unpackEchoBytes(response.getData());
                 long delta = System.currentTimeMillis() - ts;
                 RTTs.add(delta);
@@ -102,13 +105,9 @@ public class PingClient
   }
 
   public static void main(String[] args) throws Exception {
-
-    //TODO(syu) code for handling differing arguments
     PingClient pc = new PingClient();
     pc.parseArgs(args);
     pc.clientSocket = new DatagramSocket();
     pc.pingTenTimes(1000);
-
-
   } // end of main
 }

@@ -1,3 +1,4 @@
+// Author: Sherwin Yu
 // PingServer.java
 
 import java.io.*;
@@ -6,7 +7,8 @@ import java.util.*;
 import java.nio.ByteBuffer;
 
 /*
- * Server to process ping requests over UDP.
+ * Represents a message to send between client or server. toByteArr is used to package into byte data
+ * header - should be either "PING" or "PINGCHO"
  */
 class PingMessage {
 
@@ -63,6 +65,10 @@ class PingMessage {
 
 }
 
+/*
+ * The PingServer receives requests from PingClients. It does not respond to pings with incorrect passwords.
+ * Optional LOSS_RATE and AVERAGE_DELAY for packets can be specified also.
+ */
 public class PingServer extends Thread
 {
 
@@ -79,30 +85,23 @@ public class PingServer extends Thread
     running = false;
   }
 
-  public void run() 
+  public void run()
   {
-
     Random random = new Random();
     running = true;
     try {
       do {
         DatagramPacket request = new DatagramPacket(new byte[1024], 1024);
         socket.receive(request);
-
-        byte[] buf = request.getData();
-        PingMessage msg = new PingMessage(buf, false);
-
+        PingMessage msg = new PingMessage(request.getData(), false);
         System.out.println("Received request: " + msg.getString());
 
-        // Simulate packet loss
         if (random.nextDouble() < LOSS_RATE) {
           System.out.println("   ...but simulating packet loss.");
           continue;
         }
         Thread.sleep((int) (random.nextDouble() * 2 * AVERAGE_DELAY));
 
-        InetAddress clientHost = request.getAddress();
-        int clientPort = request.getPort();
         if (!msg.password.equals(serverPassword))
         {
           System.out.println("     ...but reply not sent: password missmatch");
@@ -110,7 +109,6 @@ public class PingServer extends Thread
         }
 
         msg.header = "PINGECHO";
-        buf = msg.toByteArr();
         reply(msg, request.getAddress(), request.getPort());
         System.out.println("    Reply sent: " + msg.getString());
 
@@ -168,8 +166,4 @@ public class PingServer extends Thread
     ps.run();
   }
 
-
-  /*
-   * Print ping data to the standard output stream.
-   */
 }
