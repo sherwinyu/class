@@ -24,13 +24,47 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.nio.ByteBuffer;
+import java.util.concurrent.*;
 
+class GetFileTask implements Runnable {
+  protected String server;
+  protected int port;
+  protected int threadCount;
+  protected String infile;
+  long startTime;
+  long endTime;
+
+  public void run () {
+    boolean timeup = true;
+
+    while(timeup)
+    {
+      try {
+        Thread.sleep(1000);
+        getFile();
+      } catch (Exception e) {timeup = false; }
+    }
+    System.out.println("leaving run");
+
+  }
+  void getFile() {
+    System.out.println("hashcode = " + this.hashCode() + "\tserver = " + server);
+  }
+
+  public GetFileTask(String server, int timeout) {
+    this.server = server;
+    startTime = System.currentTimeMillis();
+    endTime = startTime + timeout * 1000;
+    System.out.println("startime=" + startTime + "\tendtime= " +endTime);
+  }
+}
 public class SHTTPTestClient {
   protected String server;
   protected int port;
   protected int threadCount;
   protected String infile;
   protected int timeout;
+  protected ExecutorService executor;
 
   public SHTTPTestClient(String server, int port, int threadCount, String infile, int timeout) {
     this.server = server;
@@ -38,51 +72,63 @@ public class SHTTPTestClient {
     this.threadCount = threadCount;
     this.infile = infile;
     this.timeout = timeout;
+    this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
+  }
+
+  public void start() throws Exception {
+    for (int i = 0; i< threadCount; i++)
+      executor.execute(new GetFileTask(server, timeout));
+    Thread.sleep(timeout * 1000);
+    executor.shutdownNow();
+    System.out.println("End start");
   }
 
   // %java SHTTPTestClient -server <server> -port <server port> -parallel <# of threads> -files <file name> -T <time of test in seconds>
   public static void main(String[] args) {
-    ;
+    try {
+      SHTTPTestClient stc = createFromArgs(args);
+      stc.start();
+    } catch (Exception e)
+    {
+      System.out.println("Usage: java SHTTPTestClient -server <server> -port <server port> -parallel <# of threads> -files <file name> -T <time of test in seconds>");
+    }
+
   }
 
   public static SHTTPTestClient createFromArgs(String[] args) throws NumberFormatException, ArrayIndexOutOfBoundsException {
-    System.out.println(Arrays.toString(args));
-
     String server = "";
     int port = 0;
     int threadCount = 0;
     String infile = "";
     int timeout = 5000;
-      if (args.length != 10) throw new NumberFormatException();
+    if (args.length != 10) throw new NumberFormatException();
 
-      for(int i = 0; i < args.length; i++) { // need +1 because we increment by two
-        if (args[i].equals("-server")) {
-          server = args[i+1];
-          i++;
-          continue;
-        }
-        if (args[i].equals("-port")) {
-          port = Integer.parseInt(args[i+1]);
-          i++;
-          continue;
-        }
-        if (args[i].equals("-parallel")) {
-          threadCount = Integer.parseInt(args[i+1]);
-          i++;
-          continue;
-        }
-        if (args[i].equals("-files")) {
-          infile = args[i+1];
-          i++;
-          continue;
-        }
-        if (args[i].equals("-T")) {
-          timeout = Integer.parseInt(args[i+1]);
-          System.out.println("timeout = " + timeout);
-
-          continue;
-        }
+    for(int i = 0; i < args.length; i++) { // need +1 because we increment by two
+      if (args[i].equals("-server")) {
+        server = args[i+1];
+        i++;
+        continue;
       }
+      if (args[i].equals("-port")) {
+        port = Integer.parseInt(args[i+1]);
+        i++;
+        continue;
+      }
+      if (args[i].equals("-parallel")) {
+        threadCount = Integer.parseInt(args[i+1]);
+        i++;
+        continue;
+      }
+      if (args[i].equals("-files")) {
+        infile = args[i+1];
+        i++;
+        continue;
+      }
+      if (args[i].equals("-T")) {
+        timeout = Integer.parseInt(args[i+1]);
+        continue;
+      }
+    }
     SHTTPTestClient stc = new SHTTPTestClient(server, port, threadCount, infile, timeout);
 
     return stc;
