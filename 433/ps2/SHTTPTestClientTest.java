@@ -62,8 +62,12 @@ public class SHTTPTestClientTest {
 
       stc.executor = executor;
       stc.start();
-      // verify(spyExec, timeout(stc.timeout * 1000).times(10)).execute((Runnable) anyObject());
-       verify(executor, timeout(stc.timeout * 1000).times(10)).execute((Runnable) anyObject());
+       verify(executor, timeout(stc.timeout * 1000).times(5)).execute((Runnable) anyObject());
+    }
+  @Test
+    public void testGetFile() {
+      GetFileTask gft = new GetFileTask("127.0.0.1", 
+      
     }
 
   public static junit.framework.Test suite() {
