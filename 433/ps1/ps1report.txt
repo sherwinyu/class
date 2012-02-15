@@ -1,0 +1,114 @@
+Sherwin Yu
+CS 433 PS 1: PingClient and PingServer
+
+Result 0:  Running client on ladybug, server on peacock, with no delay and no loss
+
+ sy23@peacock [ ~/class/433 (master) ]$ java PingServer 7777 foobar
+
+ and
+
+ sy23@ladybug [ ~/class/433 (master) ]$ java PingClient peacock 7777 foobar
+   Response received. RTT: 5 Response: PINGECHO 0 1328745680090 foobar
+   Response received. RTT: 1 Response: PINGECHO 1 1328745681086 foobar
+   Response received. RTT: 1 Response: PINGECHO 2 1328745682086 foobar
+   Response received. RTT: 1 Response: PINGECHO 3 1328745683086 foobar
+   Response received. RTT: 0 Response: PINGECHO 4 1328745684086 foobar
+   Response received. RTT: 1 Response: PINGECHO 5 1328745685086 foobar
+   Response received. RTT: 1 Response: PINGECHO 6 1328745686086 foobar
+   Response received. RTT: 1 Response: PINGECHO 7 1328745687086 foobar
+   Response received. RTT: 1 Response: PINGECHO 8 1328745688086 foobar
+   Response received. RTT: 1 Response: PINGECHO 9 1328745689086 foobar
+   Number of replies:10
+   Min RTT:0
+   Max RTT:5
+   Avg RTT:1.3
+   Terminating.
+
+
+Result 1: Running client on peacock, server on localhost, with 950ms delay and 50% loss
+
+ sy23@peacock [ ~/class/433 (master) ]$ java PingServer 7777 foobar 950 .5
+
+ and
+
+ sy23@peacock [ ~/class/433 (master) ]$ java PingClient localhost 7777 foobar
+   Response timed out. Continuing...
+   Response received. RTT: 349 Response: PINGECHO 0 1328743744291 foobar
+   Response received. RTT: 0 Response: PINGECHO 1 1328743745293 foobar
+   Response timed out. Continuing...
+   Response timed out. Continuing...
+   Response received. RTT: 195 Response: PINGECHO 4 1328743748291 foobar
+   Response timed out. Continuing...
+   Response timed out. Continuing...
+   Response timed out. Continuing...
+   Response received. RTT: 433 Response: PINGECHO 8 1328743752293 foobar
+   Number of replies:4
+   Min RTT:0
+   Max RTT:433
+   Avg RTT:244.25
+   Terminating.
+
+
+Result 2: Running client on home computer (in Morse), server on peacock, no simulated delay or loss
+
+ sy23@peacock [ ~/class/433 (master) ]$ java PingServer 7777 foobar
+
+ and
+
+ syu@velleity [ ~/class/433 (master) ]$ java PingClient peacock.zoo.cs.yale.edu 7777 foobar
+   Response received. RTT: 7 Response: PINGECHO 0 1328745515608 foobar
+   Response received. RTT: 2 Response: PINGECHO 1 1328745516607 foobar
+   Response received. RTT: 2 Response: PINGECHO 2 1328745517607 foobar
+   Response received. RTT: 1 Response: PINGECHO 3 1328745518607 foobar
+   Response received. RTT: 1 Response: PINGECHO 4 1328745519609 foobar
+   Response received. RTT: 2 Response: PINGECHO 5 1328745520609 foobar
+   Response received. RTT: 2 Response: PINGECHO 6 1328745521608 foobar
+   Response received. RTT: 3 Response: PINGECHO 7 1328745522607 foobar
+   Response received. RTT: 2 Response: PINGECHO 8 1328745523607 foobar
+   Response received. RTT: 1 Response: PINGECHO 9 1328745524608 foobar
+   Number of replies:10
+   Min RTT:1
+   Max RTT:7
+   Avg RTT:2.3
+   Terminating.
+
+
+I decided to try test driven development on this first problemset: I wrote my
+unit tests before adding new features, ensured that the tests failed, then added
+new code, then ensured that tests passed. I used the java libraries JUnit and
+Mockito for the testing and mocking.
+
+The unit tests with mock objects allowed me to test the server and client
+independently and reliably: for example, to test the server ignores pings with
+the wrong password, I used a mockSocket that simulated incoming pings with a
+wrong password when the server calls socket.receive(request).
+
+My unit tests also test that my method for packing and unpacking data into the
+byte arrays for the datagrampackets works as expected: the tests pack and the
+unpack and verify that the bytes are the same.
+
+Encoding and decoding should work across platforms in this case because we are
+only dealing with ASCII characters -- I convert everything to bytes and work
+with bytes directly instead of relying on variable sized characters. This takes
+advantage of the fact that the Java byte primitive is the same size across
+platforms.
+
+We can estimate the bandwidth from client to server using hte packet pair
+technique. Have the client send two packets and having the server keep track of
+their arrival times. The packet size divided by the time delta is an estimation
+of the bottleneck bandwidth between client to server. The server can reply to
+the client with the estimation. To measure from server to client, we will need
+the Server to send a packet pair to the client and perform a similar analysis.
+Overall, to support this functionality, we will probably have to define another
+message format (so instead of "PING" and "PING ECHO" we will need "ESTIMATEBW"
+as the command, which will tell the other host to prepare to receive the packet
+pair)
+
+My tests on the zoo machines show that the RTT (measured on the client) is
+around 1ms; thus we synchronize clocks within 1ms by simply having one machine
+adopt the other machine's timestamp -- this will work within 1ms. Note that
+using currentTimeMillis in Java only returns the timestamp to millisecond
+precision, so synchroniozing to within 1ms/2 is pretty good given this
+restraint. If the RTT is longer, we can be smarter about it -- first send
+several pings to calculate the average RTT, then send a synchronization packet
+and add .5*average RTT to the timestamp to account for the network delay.
