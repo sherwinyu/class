@@ -26,13 +26,16 @@ import java.util.*;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 
-class GetFileTask implements Runnable {
+class GetFileTasks implements Runnable {
   protected String server;
   protected int port;
   protected int threadCount;
   protected String infile;
+
   long startTime;
   long endTime;
+  DataOutputStream dataOutputStream;
+  Socket clientSocket;
 
   public void run () {
     boolean timeup = true;
@@ -41,28 +44,49 @@ class GetFileTask implements Runnable {
     {
       try {
         Thread.sleep(1000);
-        getFile();
+        getFile("filename");
       } catch (Exception e) {timeup = false; }
     }
-    System.out.println("leaving run");
-
   }
-  void getFile() {
+
+  public String requestFileMessage(String fn) {
+    return fn;
+  }
+
+  void getFile(String fn) throws IOException {
     System.out.println("hashcode = " + this.hashCode() + "\tserver = " + server);
+    dataOutputStream.writeBytes("asdf\n");
   }
 
-  public GetFileTask(String server, int timeout) {
+  // time out is in seconds
+  public GetFileTasks(Socket sock, String[] filenames, int timeout) throws IOException {
     this.server = server;
+    clientSocket = sock; //new Socket(InetAddress.getByName(server), port);
+    dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+
     startTime = System.currentTimeMillis();
     endTime = startTime + timeout * 1000;
-    System.out.println("startime=" + startTime + "\tendtime= " +endTime);
+    // System.out.println("startime=" + startTime + "\tendtime= " +endTime);
+  }
+
+  public GetFileTasks(String server, int port, String[] filenames, int timeout) throws IOException {
+    clientSocket = new Socket(InetAddress.getByName(server), port);
+    dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+
+    startTime = System.currentTimeMillis();
+    endTime = startTime + timeout * 1000;
+    // System.out.println("startime=" + startTime + "\tendtime= " +endTime);
   }
 }
+
 public class SHTTPTestClient {
   protected String server;
   protected int port;
+  protected Socket clientSocket;
+
   protected int threadCount;
   protected String infile;
+  protected String[] filenames;
   protected int timeout;
   protected ExecutorService executor;
 
@@ -72,12 +96,25 @@ public class SHTTPTestClient {
     this.threadCount = threadCount;
     this.infile = infile;
     this.timeout = timeout;
+    try {
+    this.clientSocket = new Socket(InetAddress.getByName(server), port);
+    } catch (Exception e) {e.printStackTrace();}
+    this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
+  }
+
+  public SHTTPTestClient(Socket sock, int threadCount, String infile, int timeout) {
+    this.threadCount = threadCount;
+    this.infile = infile;
+    this.timeout = timeout;
+    this.clientSocket = sock;
     this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
   }
 
   public void start() throws Exception {
     for (int i = 0; i< threadCount; i++)
-      executor.execute(new GetFileTask(server, timeout));
+      // executor.execute(new GetFileTasks((Socket) clientSocket.clone(), filenames, timeout));
+      // executor.execute(new GetFileTasks(new Socket(InetAddress.getByName(server), port), filenames, timeout));
+      executor.execute(new GetFileTasks(server, port, filenames, timeout));
     Thread.sleep(timeout * 1000);
     executor.shutdownNow();
     System.out.println("End start");

@@ -1,6 +1,7 @@
 import org.junit.Test;
 import org.junit.*;
 import java.net.*;
+import java.io.*;
 import java.util.concurrent.*;
 import org.mockito.stubbing.*;
 import org.mockito.invocation.*;
@@ -14,9 +15,11 @@ public class SHTTPTestClientTest {
 
 
   private SHTTPTestClient stc;
+  private Socket mockSock;
   @Before
     public void setUp() throws UnknownHostException {
-      stc = new SHTTPTestClient("localhost", 333, 5, "files.txt", 10);
+      mockSock = mock(Socket.class);
+      stc = new SHTTPTestClient(mockSock, 5, "files.txt", 10);
       /*
          pc = new PingClient();
          pc.port = 55;
@@ -59,15 +62,30 @@ public class SHTTPTestClientTest {
       // ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(stc.threadCount);
       ExecutorService executor = mock(ScheduledThreadPoolExecutor.class);
       // ScheduledThreadPoolExecutor spyExec = spy(executor);
-
+      // when(executor.execute((Runnable) anyObject)).(doNothing);
       stc.executor = executor;
+      try {
       stc.start();
-       verify(executor, timeout(stc.timeout * 1000).times(5)).execute((Runnable) anyObject());
+      } catch (ConnectException e)
+      {
+        // do nothing; 
+      }
+      verify(executor, timeout(stc.timeout * 1000).times(5)).execute((Runnable) anyObject());
     }
   @Test
-    public void testGetFile() {
-      GetFileTask gft = new GetFileTask("127.0.0.1", 
-      
+    public void testGetFile() throws Exception {
+      GetFileTasks gft = new GetFileTasks(new Socket(InetAddress.getByName("localhost"), 333), new String[]{"file1", "fil2", "fil3"}, 10);
+
+      DataOutputStream mockDOS = mock(DataOutputStream.class);
+      gft.dataOutputStream = mockDOS;
+
+      gft.getFile("file1.txt");
+      verify(mockDOS).writeBytes(gft.requestFileMessage("file1.txt"));
+      gft.getFile("file2.txt");
+      verify(mockDOS).writeBytes(gft.requestFileMessage("file1.txt"));
+      gft.getFile("file3.txt");
+      verify(mockDOS).writeBytes(gft.requestFileMessage("file3.txt"));
+
     }
 
   public static junit.framework.Test suite() {
