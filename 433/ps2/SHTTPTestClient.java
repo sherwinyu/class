@@ -29,8 +29,7 @@ import java.util.concurrent.*;
 class GetFileTasks implements Runnable {
   protected String server;
   protected int port;
-  protected int threadCount;
-  protected String infile;
+  protected String[] filenames;
 
   long startTime;
   long endTime;
@@ -40,22 +39,30 @@ class GetFileTasks implements Runnable {
   public void run () {
     boolean timeup = true;
 
+    int i = 0;
     while(timeup)
     {
       try {
-        Thread.sleep(1000);
-        getFile("filename");
+        Thread.sleep(100);
+        getFile(filenames[i]);
       } catch (Exception e) {timeup = false; }
+      i = (i + 1) % filenames.length;
     }
   }
 
   public String requestFileMessage(String fn) {
-    return fn;
+    return "GET " + fn + " HTTP/1.0\n\r\n";
+  }
+
+  int fileInd = 0;
+  void nextRequest() throws IOException {
+    getFile(filenames[fileInd]);
+    fileInd = (fileInd + 1) % filenames.length;
   }
 
   void getFile(String fn) throws IOException {
     System.out.println("hashcode = " + this.hashCode() + "\tserver = " + server);
-    writeMessage(fn);
+    writeMessage(requestFileMessage(fn));
   }
 
   void writeMessage(String s) throws IOException {
@@ -64,25 +71,22 @@ class GetFileTasks implements Runnable {
 
   // time out is in seconds
   public GetFileTasks(Socket sock, String[] filenames, int timeout) throws IOException {
-    this.server = server;
-    clientSocket = sock; //new Socket(InetAddress.getByName(server), port);
-    dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
-
-    startTime = System.currentTimeMillis();
-    endTime = startTime + timeout * 1000;
-    // System.out.println("startime=" + startTime + "\tendtime= " +endTime);
+    this.clientSocket = sock;
+    this.filenames = filenames;
+    this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+    this.startTime = System.currentTimeMillis();
+    this.endTime = startTime + timeout * 1000;
   }
 
+  /*
   public GetFileTasks(String server, int port, String[] filenames, int timeout) throws IOException {
-    clientSocket = new Socket(InetAddress.getByName(server), port);
-    dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
-
-    startTime = System.currentTimeMillis();
-    endTime = startTime + timeout * 1000;
-    // System.out.println("startime=" + startTime + "\tendtime= " +endTime);
+    this.clientSocket = new Socket(InetAddress.getByName(server), port);
+    this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+    this.startTime = System.currentTimeMillis();
+    this.endTime = startTime + timeout * 1000;
   }
-  public GetFileTasks()
-  {
+  */
+  public GetFileTasks() {
   }
 }
 
@@ -104,7 +108,7 @@ public class SHTTPTestClient {
     this.infile = infile;
     this.timeout = timeout;
     try {
-    this.clientSocket = new Socket(InetAddress.getByName(server), port);
+    this.clientSocket = getSocket(server, port);
     } catch (Exception e) {e.printStackTrace();}
     this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
   }
@@ -117,10 +121,12 @@ public class SHTTPTestClient {
     this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
   }
 
+  /* Factory method for testing */
   public Socket getSocket(String s, int p) throws UnknownHostException, IOException  {
     return new Socket(InetAddress.getByName(s), p);
   }
 
+  /* Factory method for testing */
   public GetFileTasks createGetFileTask(Socket s, String[] filenames, int timeout) throws UnknownHostException, IOException  {
     return new GetFileTasks(s, filenames, timeout);
   }

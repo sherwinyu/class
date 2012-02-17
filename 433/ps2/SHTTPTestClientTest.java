@@ -23,32 +23,20 @@ public class SHTTPTestClientTest {
   @Before
     public void setUp() throws UnknownHostException {
       mockSock = mock(Socket.class);
-      stc = new SHTTPTestClient(mockSock, 5, "files.txt", 3);
+      stc = new SHTTPTestClient(mockSock, 5, "files.txt", 1);
       spyStc = spy(stc);
-      /*
-         pc = new PingClient();
-         pc.port = 55;
-         pc.password = "foo";
-         pc.hostAddress = InetAddress.getByName("127.0.0.1");
-
-         pm = new PingMessage();
-         long ts = 8388356063466450277L;
-         pm.timestamp = ts;
-         pm.sequenceNumber = 21326;
-         pm.password = pc.password;
-         pm.header = "PING";
-         */
     }
 
-  // @Test
-  public void testParseArgs() throws Exception {
-    stc = SHTTPTestClient.createFromArgs(new String[]{"-server", "localhost", "-port", "12345", "-parallel", "4", "-files", "test.txt", "-T", "10" });
-    assertEquals(stc.server, "localhost");
-    assertEquals(stc.port, 12345);
-    assertEquals(stc.threadCount, 4);
-    assertEquals(stc.infile, "test.txt");
-    assertEquals(stc.timeout, 10);
-  }
+  @Test
+    public void testParseArgs() throws Exception {
+      doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
+      stc = SHTTPTestClient.createFromArgs(new String[]{"-server", "localhost", "-port", "12345", "-parallel", "4", "-files", "test.txt", "-T", "10" });
+      assertEquals(stc.server, "localhost");
+      assertEquals(stc.port, 12345);
+      assertEquals(stc.threadCount, 4);
+      assertEquals(stc.infile, "test.txt");
+      assertEquals(stc.timeout, 10);
+    }
 
   protected void implementAsDirectExecutor(Executor executor) {
     doAnswer(new Answer<Object>() {
@@ -82,19 +70,9 @@ public class SHTTPTestClientTest {
 
   @Test
     public void testGetFile() throws Exception {
-      GetFileTasks gft = new GetFileTasks(); //new Socket(InetAddress.getByName("localhost"), 333), new String[]{"file1", "fil2", "fil3"}, 10);
-      GetFileTasks gftSpy = spy(gft); //new GetFileTasks(); //new Socket(InetAddress.getByName("localhost"), 333), new String[]{"file1", "fil2", "fil3"}, 10);
-      // GetFileTasks gft = new GetFileTasks(new Socket(InetAddress.getByName("localhost"), 333), new String[]{"file1", "fil2", "fil3"}, 10);
-
-
-      DataOutputStream mockDOS = mock(DataOutputStream.class);
+      GetFileTasks gft = new GetFileTasks();
+      GetFileTasks gftSpy = spy(gft);
       doNothing().when(gftSpy).writeMessage(anyString());
-      // mockDOS.writeBytes("file1.txt");
-
-      // verify(mockDOS).writeBytes(gft.requestFileMessage("file1.txt"));
-
-      gft.dataOutputStream = mockDOS;
-      // when(mockDOS).writeBytes(anyString())).doNothing();
 
       gftSpy.getFile("file1.txt");
       gftSpy.getFile("file2.txt");
@@ -107,6 +85,64 @@ public class SHTTPTestClientTest {
       assertEquals(gftSpy.requestFileMessage("file1.txt"), args.get(0));
       assertEquals(gftSpy.requestFileMessage("file2.txt"), args.get(1));
       assertEquals(gftSpy.requestFileMessage("file3.txt"), args.get(2));
+    }
+
+  /*
+     GET <URL> HTTP/1.0
+     CRLF
+     */
+
+  @Test
+    public void testRequestFileMessage()
+    {
+      GetFileTasks gft = new GetFileTasks();
+
+      String urlStr, expectedRequest;
+      urlStr = "somegenericstring";
+      expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
+      assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
+
+      urlStr = "this//string//has//slashes//";
+      expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
+      assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
+
+      urlStr = "this\\string\\has\\\\slashes//";
+      expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
+      assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
+
+      urlStr = "&abcABC.*.\\$#%";
+      expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
+      assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
+    }
+  @Test
+    public void testNextRequest() {
+      try {
+      GetFileTasks gft = new GetFileTasks();
+      GetFileTasks gftSpy = spy(gft);
+      doNothing().when(gftSpy).writeMessage(anyString());
+
+      String[] filenames = {"abc#def", "voice/b/0?pli=1#inbox", "test..test..test", "//\\/"};
+      gftSpy.filenames = filenames;
+        gftSpy.nextRequest();
+        gftSpy.nextRequest();
+        gftSpy.nextRequest();
+        gftSpy.nextRequest();
+        gftSpy.nextRequest();
+        gftSpy.nextRequest();
+        gftSpy.nextRequest();
+
+      ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+      verify(gftSpy, times(7)).getFile(captor.capture());
+      List<String> args = captor.getAllValues();
+
+      assertEquals(filenames[0], args.get(0));
+      assertEquals(filenames[1], args.get(1));
+      assertEquals(filenames[2], args.get(2));
+      assertEquals(filenames[3], args.get(3));
+      assertEquals(filenames[0], args.get(4));
+      assertEquals(filenames[1], args.get(5));
+      assertEquals(filenames[2], args.get(6));
+      } catch (IOException e) {e.printStackTrace();}
     }
 
   public static junit.framework.Test suite() {
