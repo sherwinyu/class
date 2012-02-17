@@ -55,7 +55,11 @@ class GetFileTasks implements Runnable {
 
   void getFile(String fn) throws IOException {
     System.out.println("hashcode = " + this.hashCode() + "\tserver = " + server);
-    dataOutputStream.writeBytes("asdf\n");
+    writeMessage(fn);
+  }
+
+  void writeMessage(String s) throws IOException {
+    dataOutputStream.writeBytes(s);
   }
 
   // time out is in seconds
@@ -76,6 +80,9 @@ class GetFileTasks implements Runnable {
     startTime = System.currentTimeMillis();
     endTime = startTime + timeout * 1000;
     // System.out.println("startime=" + startTime + "\tendtime= " +endTime);
+  }
+  public GetFileTasks()
+  {
   }
 }
 
@@ -110,11 +117,20 @@ public class SHTTPTestClient {
     this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
   }
 
+  public Socket getSocket(String s, int p) throws UnknownHostException, IOException  {
+    return new Socket(InetAddress.getByName(s), p);
+  }
+
+  public GetFileTasks createGetFileTask(Socket s, String[] filenames, int timeout) throws UnknownHostException, IOException  {
+    return new GetFileTasks(s, filenames, timeout);
+  }
+
   public void start() throws Exception {
     for (int i = 0; i< threadCount; i++)
       // executor.execute(new GetFileTasks((Socket) clientSocket.clone(), filenames, timeout));
       // executor.execute(new GetFileTasks(new Socket(InetAddress.getByName(server), port), filenames, timeout));
-      executor.execute(new GetFileTasks(server, port, filenames, timeout));
+      // executor.execute(new GetFileTasks(getSocket(server, port), filenames, timeout));
+      executor.execute(createGetFileTask(getSocket(server, port), filenames, timeout));
     Thread.sleep(timeout * 1000);
     executor.shutdownNow();
     System.out.println("End start");

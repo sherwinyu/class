@@ -1,5 +1,5 @@
-// Author: Sherwin Yu
-// PingClient.java
+//j Author: Sherwin Yu
+  // PingClient.java
 import java.io.*;
 import java.net.*;
 import java.util.*;
