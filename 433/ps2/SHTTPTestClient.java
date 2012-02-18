@@ -44,9 +44,10 @@ class GetFileTasks implements Runnable {
     {
       try {
         Thread.sleep(100);
-        getFile(filenames[i]);
-      } catch (Exception e) {timeup = false; }
-      i = (i + 1) % filenames.length;
+        nextRequest();
+      } 
+      catch (InterruptedException e) {timeup = false; }
+      catch (IOException e) {e.printStackTrace(); }
     }
   }
 
@@ -79,13 +80,13 @@ class GetFileTasks implements Runnable {
   }
 
   /*
-  public GetFileTasks(String server, int port, String[] filenames, int timeout) throws IOException {
-    this.clientSocket = new Socket(InetAddress.getByName(server), port);
-    this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
-    this.startTime = System.currentTimeMillis();
-    this.endTime = startTime + timeout * 1000;
-  }
-  */
+     public GetFileTasks(String server, int port, String[] filenames, int timeout) throws IOException {
+     this.clientSocket = new Socket(InetAddress.getByName(server), port);
+     this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+     this.startTime = System.currentTimeMillis();
+     this.endTime = startTime + timeout * 1000;
+     }
+     */
   public GetFileTasks() {
   }
 }
@@ -108,7 +109,7 @@ public class SHTTPTestClient {
     this.infile = infile;
     this.timeout = timeout;
     try {
-    this.clientSocket = getSocket(server, port);
+      this.clientSocket = getSocket(server, port);
     } catch (Exception e) {e.printStackTrace();}
     this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
   }

@@ -28,7 +28,7 @@ public class PingServerTest {
       ps.serverPassword = "foo";
       ps.port = 33333;
       ps.LOSS_RATE = 0.0;
-      ps.AVERAGE_DELAY = 25; 
+      ps.AVERAGE_DELAY = 25;
 
 
       pm = new PingMessage();
@@ -97,7 +97,7 @@ public class PingServerTest {
             response.setLength(pm.toByteArr().length);
             response.setAddress(InetAddress.getByName("127.0.0.1"));
           }
-          public int getLocalPort() { return 1337;} 
+          public int getLocalPort() { return 1337;}
         });
         */
 
