@@ -8,10 +8,11 @@ import java.util.*;
 import org.mockito.stubbing.*;
 import org.mockito.invocation.*;
 import org.mockito.*;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.verification.*;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 public class SequentialServerTest {
@@ -20,6 +21,12 @@ public class SequentialServerTest {
   private Socket mockSocket;
   private SequentialServer ss;
   private SequentialServer ssSpy;
+  private Calendar cal;
+  private WebResponse resp;
+  private WebRequest req;
+
+  @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
 
   @Before
     public void setUp() throws UnknownHostException {
@@ -31,22 +38,74 @@ public class SequentialServerTest {
       ss.serverPort = 333;
       ssSpy = spy(ss);
 
+      cal=  Calendar.getInstance();
+
+
+    }
+
+  @Test
+    public void createFromArgs() {
+      // manually tested
     }
 
   @Test
     public void testReadRequest() {
       try{
-      BufferedReader brMock = mock(BufferedReader.class);
-      when(brMock.readLine()).thenReturn("GET filedir/filename HTTP/1.0", "Host: yourserver.com", "Accept: text/html", null);
-      assertEquals(ss.readRequest(brMock), "GET filedir/filename HTTP/1.0\r\nHost: yourserver.com\r\nAccept: text/html\r\n");
+        BufferedReader brMock = mock(BufferedReader.class);
+        when(brMock.readLine()).thenReturn("GET filedir/filename HTTP/1.0", "Host: yourserver.com", "Accept: text/html", null);
+        assertEquals(ss.readRequest(brMock), "GET filedir/filename HTTP/1.0\r\nHost: yourserver.com\r\nAccept: text/html\r\n");
       } catch (Exception e) {e.printStackTrace();}
 
     }
 
   @Test
-    public void testGenerateResponse() {
-      // ss.generateResponse(WebRequest());
+    public void testGenerateResponseLoad() {
+      WebResponse resp = ss.generateResponse(new WebRequest("load"));
+      assertEquals("Service temporarily overloaded", resp.message);
+      assertEquals(502, resp.statusCode);
+      assertEquals(null, resp.contentType);
+      assertArrayEquals(null, resp.content);
+    }
 
+  @Test
+    public void testGenerateResponseIfModifiedHeader() throws IOException {
+      WebRequest req = new WebRequest("testfile");
+      cal.set(2012, 01, 01);
+      req.ifModifiedSince = cal.getTime();
+      ss.setDocumentRoot(tmp.getRoot().getPath());
+
+      File f = tmp.newFile("testfile");
+      BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+      bw.write("herpderp\n");
+      bw.close();
+
+      // Server has newer file
+      cal.set(2012, 02, 01);
+      f.setLastModified(cal.getTimeInMillis());
+      WebResponse resp = ss.generateResponse(req);
+      assertEquals("OK", resp.message);
+      assertEquals(200, resp.statusCode);
+      assertEquals("text/plain", resp.contentType);
+      assertArrayEquals("herpderp\n".getBytes(), resp.content);
+
+      // Server has older file
+      cal.set(2000, 01, 01);
+      f.setLastModified(cal.getTimeInMillis());
+      resp = ss.generateResponse(req);
+      assertEquals("Not Modified", resp.message);
+      assertEquals(304, resp.statusCode);
+      assertEquals(null, resp.contentType);
+      assertArrayEquals(null, resp.content);
+    }
+
+  @Test
+    public void testGenerateResponseFileNotFound() throws IOException {
+      req = new WebRequest("nonexistentfile");
+      resp = ss.generateResponse(req);
+      assertEquals("File Not Found", resp.message);
+      assertEquals(404, resp.statusCode);
+      assertEquals(null, resp.contentType);
+      assertArrayEquals(null, resp.content);
     }
 
   public static junit.framework.Test suite() {

@@ -14,8 +14,8 @@ CRLF
   String message;
   String server;
   String contentType;
-  int contentLength;
-  String content;
+  long contentLength;
+  byte[] content;
 
   public WebResponse(String status)
   {
@@ -24,7 +24,7 @@ CRLF
   public WebResponse() {
   }
 
-  public static WebResponse okResponse(String server, String contentType ,int length, String content) {
+  public static WebResponse okResponse(String server, String contentType, long length, byte[] content) {
     WebResponse resp = new WebResponse();
     resp.statusCode = 200;
     resp.message = "OK";
@@ -43,7 +43,15 @@ CRLF
     return resp;
   }
 
-  public static WebResponse fileNotFoundResponse(String server, int length, String content) {
+
+  public static WebResponse notModifiedResponse(String server) {
+    WebResponse resp = new WebResponse();
+    resp.statusCode = 304;
+    resp.message = "Not Modified";
+    resp.server = server;
+    return resp;
+  }
+  public static WebResponse fileNotFoundResponse(String server) {
     WebResponse resp = new WebResponse();
     resp.statusCode = 404;
     resp.message = "File Not Found";
