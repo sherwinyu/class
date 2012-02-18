@@ -1,3 +1,5 @@
+import java.util.*;
+
 public class WebResponse {
 
   /*
@@ -23,15 +25,25 @@ CRLF
   }
   public WebResponse() {
   }
+  public boolean equals(WebResponse other)
+  {
+    if (this.statusCode != other.statusCode) return false;
+    if (!this.message.equals(other.message)) return false;
+    if (!this.server.equals(other.server)) return false;
+    if (!this.contentType.equals(other.contentType)) return false;
+    if (this.contentLength != other.contentLength) return false;
+    if (!Arrays.equals(this.content, other.content)) return false;
+    return true;
+  }
 
-  public static WebResponse okResponse(String server, String contentType, long length, byte[] content) {
+  public static WebResponse okResponse(String server, String contentType, int length, byte[] content) {
     WebResponse resp = new WebResponse();
     resp.statusCode = 200;
     resp.message = "OK";
     resp.server = server;
     resp.contentType = contentType;
     resp.contentLength = length;
-    resp.content = content;
+    resp.content = Arrays.copyOf(content, content.length);
     return resp;
   }
 
@@ -85,8 +97,10 @@ CRLF
       sb.append("Content-Length: ").append(this.contentLength).append("\r\n");
     }
     sb.append("\r\n");
-    sb.append(content);
-    System.out.println(" resptostr = " + sb.toString());
+    if (content != null) {
+      System.out.println("\t\tcontent=" + Arrays.toString(this.content));
+      sb.append(new String(this.content));
+    }
     return sb.toString();
   }
 }

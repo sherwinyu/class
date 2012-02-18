@@ -9,6 +9,45 @@ public class WebRequest {
   Date ifModifiedSince;
   String userAgent;
 
+  public boolean equals(WebRequest other)
+  {
+    if (!this.method.equals(other.method)) return false;
+    if (!this.urlName.equals(other.urlName)) return false;
+    if (this.ifModifiedSince!= null)
+     if (!this.ifModifiedSince.equals(other.ifModifiedSince)) return false;
+    if (other.ifModifiedSince!= null)
+     if (!other.ifModifiedSince.equals(this.ifModifiedSince)) return false;
+    // if (!this.userAgent.equals(other.userAgent)) return false;
+    return true;
+  }
+  public String inspect()
+  {
+    String s = "";
+    s += "method: " + inspect(method);
+    s += ", urlName: " + inspect(urlName);
+    s += ", ifModifiedSince: " + ifModifiedSince;
+    s += ", userAgent: " + inspect(userAgent);
+    return s;
+  }
+  public String inspect(String in)
+  {
+    String s = "";
+    if (in == null) return "NULL";
+
+    for (int i = 0; i < in.length(); i++)
+    {
+
+      if (in.charAt(i) == '\n')
+        s += "NEWLINE";
+      else if (in.charAt(i) == '\r')
+        s += "CARRIAGE";
+      else
+        s += ("" + in.charAt(i));
+
+    }
+    return s;
+  }
+
   /*
    * Fills the web request with contents from the input string
    */

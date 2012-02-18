@@ -4,6 +4,7 @@ import java.net.*;
 import java.io.*;
 import java.util.concurrent.*;
 import java.util.*;
+import java.util.Arrays;
 
 import org.mockito.stubbing.*;
 import org.mockito.invocation.*;
@@ -29,13 +30,14 @@ public class SequentialServerTest {
     public TemporaryFolder tmp = new TemporaryFolder();
 
   @Before
-    public void setUp() throws UnknownHostException {
+    public void setUp() throws IOException {
 
       mockServerSocket = mock(ServerSocket.class);
       mockSocket = mock(Socket.class);
 
       ss = new SequentialServer();
       ss.serverPort = 333;
+      ss.setDocumentRoot(tmp.getRoot().getPath());
       ssSpy = spy(ss);
 
       cal=  Calendar.getInstance();
@@ -49,12 +51,66 @@ public class SequentialServerTest {
     }
 
   @Test
-    public void testReadRequest() {
-      try{
-        BufferedReader brMock = mock(BufferedReader.class);
-        when(brMock.readLine()).thenReturn("GET filedir/filename HTTP/1.0", "Host: yourserver.com", "Accept: text/html", null);
-        assertEquals(ss.readRequest(brMock), "GET filedir/filename HTTP/1.0\r\nHost: yourserver.com\r\nAccept: text/html\r\n");
-      } catch (Exception e) {e.printStackTrace();}
+    public void  handleRequests() throws IOException, InterruptedException {
+
+      WebRequest req1 = new WebRequest("testfile");
+      WebRequest req2 = new WebRequest("testfile.jpg");
+      WebRequest req3 = new WebRequest("testfile.doesntexist");
+
+      File f = tmp.newFile("testfile");
+      BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+      bw.write("herpderp\n");
+      bw.close();
+
+      f = tmp.newFile("testfile.jpg");
+      bw = new BufferedWriter(new FileWriter(f));
+      bw.write("herpderp\n");
+      bw.close();
+
+      doReturn(mockSocket).when(ssSpy).acceptIncomingConnection();
+      doReturn(req1.toString()).doReturn(req2.toString()).doReturn(req3.toString()).when(ssSpy).readRequest(any(InputStream.class));
+      doNothing().when(ssSpy).writeResponse(anyString(), any(DataOutputStream.class));
+
+      (new Thread(ssSpy)).start();
+      Thread.sleep(50);
+      ssSpy.alive = false;
+
+      ArgumentCaptor<WebRequest> reqCaptor = ArgumentCaptor.forClass(WebRequest.class);
+      ArgumentCaptor<String> respCaptor = ArgumentCaptor.forClass(String.class);
+
+      verify(ssSpy, atLeast(3)).generateResponse(reqCaptor.capture());
+      List<WebRequest> reqs = reqCaptor.getAllValues();
+      System.out.println("request 1: " + req1.inspect());
+      System.out.println("actual 1: " + reqs.get(0).inspect());
+      System.out.println("cmp = " + req1.equals(reqs.get(0)));
+
+      assertTrue("cmp", req1.equals(reqs.get(0)));
+      assertTrue("cmp", req2.equals(reqs.get(1)));
+      assertTrue("cmp", req3.equals(reqs.get(2)));
+      assertEquals(req1.toString(), reqs.get(0).toString());
+      assertEquals(req2.toString(), reqs.get(1).toString());
+      assertEquals(req3.toString(), reqs.get(2).toString());
+
+      verify(ssSpy, atLeast(3)).writeResponse(respCaptor.capture(), any(DataOutputStream.class));
+      List<String> resps = respCaptor.getAllValues();
+      // System.out.println("request 1: " + req1.inspect());
+      // System.out.println("actual 1: " + reqs.get(0).inspect());
+      // System.out.println("cmp = " + req1.equals(reqs.get(0)));
+      // 
+      WebResponse resp1 = WebResponse.okResponse(ssSpy.serverName, "text/plain", 9, "herpderp\n".getBytes()) ;
+      WebResponse resp2 = WebResponse.okResponse(ssSpy.serverName, "image/jpeg", 9, "herpderp\n".getBytes()) ;
+      WebResponse resp3 = WebResponse.fileNotFoundResponse(ssSpy.serverName);
+
+      System.out.println("resp 1: " + resp);
+      System.out.println("actual1 1: " + resps.get(0));
+      // assertArrayEquals(resp1.content, resps.get(0).content);
+      assertEquals(resp1.toString(), resps.get(0).toString());
+      assertEquals(resp2.toString(), resps.get(1).toString());
+      assertEquals(resp3.toString(), resps.get(2).toString());
+
+      // assertEquals(req1, reqs.get(0));
+      // assertEquals(req2, reqs.get(1));
+      // assertEquals(req3, reqs.get(2));
 
     }
 
@@ -108,142 +164,82 @@ public class SequentialServerTest {
       assertArrayEquals(null, resp.content);
     }
 
+  @Test
+    public void respondWithFileJpg() throws IOException {
+      ss.setDocumentRoot(tmp.getRoot().getPath());
+
+      File f = tmp.newFile("testfile.jpg");
+      BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+      bw.write("jpegfile\n");
+      bw.close();
+
+      req = new WebRequest("testfile.jpg");
+      resp = ss.generateResponse(req);
+
+      assertEquals("OK", resp.message);
+      assertEquals(200, resp.statusCode);
+      assertEquals("image/jpeg", resp.contentType);
+      assertArrayEquals("jpegfile\n".getBytes(), resp.content);
+      System.out.println("actual=" + Arrays.toString(resp.content));
+      System.out.println("expected=" + Arrays.toString("jpegfile\n".getBytes()));
+      assertEquals(WebResponse.okResponse(ss.serverName, "image/jpeg", 9, "jpegfile\n".getBytes()).toString(), resp.toString());
+    }
+
+  @Test
+    public void respondWithFileGif() throws IOException {
+      ss.setDocumentRoot(tmp.getRoot().getPath());
+
+      File f = tmp.newFile("testfile.gif");
+      BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+      bw.write("gifdata\n");
+      bw.close();
+
+      req = new WebRequest("testfile.gif");
+      resp = ss.generateResponse(req);
+
+      assertEquals("OK", resp.message);
+      assertEquals(200, resp.statusCode);
+      assertEquals("image/gif", resp.contentType);
+      assertArrayEquals("gifdata\n".getBytes(), resp.content);
+    }
+
+  @Test
+    public void respondWithFileHtml() throws IOException {
+      ss.setDocumentRoot(tmp.getRoot().getPath());
+
+      File f = tmp.newFile("testfile.html");
+      BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+      bw.write("<h1>hello!</h1>\n");
+      bw.close();
+
+      req = new WebRequest("testfile.html");
+      resp = ss.generateResponse(req);
+
+      assertEquals("OK", resp.message);
+      assertEquals(200, resp.statusCode);
+      assertEquals("text/html", resp.contentType);
+      assertArrayEquals("<h1>hello!</h1>\n".getBytes(), resp.content);
+    }
+
+  @Test
+    public void respondWithFilePlain() throws IOException {
+      ss.setDocumentRoot(tmp.getRoot().getPath());
+
+      File f = tmp.newFile("testfile");
+      BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+      bw.write("<h1>hello! this file is plaintext</h1>\n");
+      bw.close();
+
+      req = new WebRequest("testfile");
+      resp = ss.generateResponse(req);
+
+      assertEquals("OK", resp.message);
+      assertEquals(200, resp.statusCode);
+      assertEquals("text/plain", resp.contentType);
+      assertArrayEquals("<h1>hello! this file is plaintext</h1>\n".getBytes(), resp.content);
+    }
   public static junit.framework.Test suite() {
     return new junit.framework.JUnit4TestAdapter(SequentialServerTest.class);
   }
 
 }
-/*
-
-
-   private Socket mockSock;
-   @Before
-   public void setUp() throws UnknownHostException {
-   mockSock = mock(Socket.class);
-   stc = new SHTTPTestClient(mockSock, 5, "files.txt", 1);
-   spyStc = spy(stc);
-   }
-
-   @Test
-   public void testParseArgs() throws Exception {
-   doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
-
-   stc = SHTTPTestClient.createFromArgs(new String[]{"-server", "localhost", "-port", "12345", "-parallel", "4", "-files", "test.txt", "-T", "10" });
-
-   assertEquals(stc.server, "localhost");
-   assertEquals(stc.port, 12345);
-   assertEquals(stc.threadCount, 4);
-   assertEquals(stc.infile, "test.txt");
-   assertEquals(stc.timeout, 10);
-   }
-
-   protected void implementAsDirectExecutor(Executor executor) {
-   doAnswer(new Answer<Object>() {
-   public Object answer(InvocationOnMock invocation)
-   throws Exception {
-   Object[] args = invocation.getArguments();
-   Runnable runnable = (Runnable)args[0];
-   runnable.run();
-   return null;
-   }
-   }).when(executor).execute(any(Runnable.class));
-   }
-
-   @Test
-   public void testStart() throws Exception {
-// ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(stc.threadCount);
-ExecutorService executor = mock(ScheduledThreadPoolExecutor.class);
-// ScheduledThreadPoolExecutor spyExec = spy(executor);
-// when(executor.execute((Runnable) anyObject)).(doNothing);
-spyStc.executor = executor;
-doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
-doReturn(new GetFileTasks()).when(spyStc).createGetFileTask(any(Socket.class), any(String[].class), anyInt());
-try {
-spyStc.start();
-} catch (ConnectException e)
-{
-e.printStackTrace();
-}
-verify(executor, timeout(spyStc.timeout * 1000).times(5)).execute((Runnable) anyObject());
-}
-
-@Test
-public void testGetFile() throws Exception {
-GetFileTasks gft = new GetFileTasks();
-GetFileTasks gftSpy = spy(gft);
-doNothing().when(gftSpy).writeMessage(anyString());
-
-gftSpy.getFile("file1.txt");
-gftSpy.getFile("file2.txt");
-gftSpy.getFile("file3.txt");
-
-ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-verify(gftSpy, times(3)).writeMessage(captor.capture());
-List<String> args = captor.getAllValues();
-
-assertEquals(gftSpy.requestFileMessage("file1.txt"), args.get(0));
-assertEquals(gftSpy.requestFileMessage("file2.txt"), args.get(1));
-assertEquals(gftSpy.requestFileMessage("file3.txt"), args.get(2));
-}
-
-
-  @Test
-public void testRequestFileMessage()
-{
-  GetFileTasks gft = new GetFileTasks();
-
-  String urlStr, expectedRequest;
-  urlStr = "somegenericstring";
-  expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
-  assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
-
-  urlStr = "this//string//has//slashes//";
-  expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
-  assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
-
-  urlStr = "this\\string\\has\\\\slashes//";
-  expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
-  assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
-
-  urlStr = "&abcABC.*.\\$#%";
-  expectedRequest = "GET " + urlStr + " HTTP/1.0\n\r\n";
-  assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
-}
-@Test
-public void testNextRequest() {
-  try {
-    GetFileTasks gft = new GetFileTasks();
-    GetFileTasks gftSpy = spy(gft);
-    doNothing().when(gftSpy).writeMessage(anyString());
-
-    String[] filenames = {"abc#def", "voice/b/0?pli=1#inbox", "test..test..test", "//\\/"};
-    gftSpy.filenames = filenames;
-    gftSpy.nextRequest();
-    gftSpy.nextRequest();
-    gftSpy.nextRequest();
-    gftSpy.nextRequest();
-    gftSpy.nextRequest();
-    gftSpy.nextRequest();
-    gftSpy.nextRequest();
-
-    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(gftSpy, times(7)).getFile(captor.capture());
-    List<String> args = captor.getAllValues();
-
-    assertEquals(filenames[0], args.get(0));
-    assertEquals(filenames[1], args.get(1));
-    assertEquals(filenames[2], args.get(2));
-    assertEquals(filenames[3], args.get(3));
-    assertEquals(filenames[0], args.get(4));
-    assertEquals(filenames[1], args.get(5));
-    assertEquals(filenames[2], args.get(6));
-  } catch (IOException e) {e.printStackTrace();}
-}
-
-public static junit.framework.Test suite() {
-  return new junit.framework.JUnit4TestAdapter(SHTTPTestClientTest.class);
-}
-
-
-}
-*/

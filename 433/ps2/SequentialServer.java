@@ -2,11 +2,12 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class SequentialServer{
+public class SequentialServer implements Runnable{
 
   public int serverPort = 6789;
   public String serverName = "SequentialServer";
   ServerSocket listenSocket;
+  public boolean alive = true;
 
   //public static String WWW_ROOT = "/home/httpd/html/zoo/classes/cs433/";
   public String WWW_ROOT = "./";
@@ -42,26 +43,33 @@ public class SequentialServer{
       throw new FileNotFoundException("Couldn't open document root: " + dirname);
   }
 
+  public void run()
+  {
+    try {
+    this.handleRequests();
+    } catch (Exception e) {e.printStackTrace(); }
+  }
 
-  public void handleRequests() throws Exception {
+
+  public void handleRequests() throws IOException {
 
     Socket connectionSocket;
-    while (true) {
+    while (alive) {
       connectionSocket = acceptIncomingConnection(); // blocking
 
-      String requestString = readRequest( new BufferedReader( new InputStreamReader(connectionSocket.getInputStream())));
+      String requestString = readRequest( connectionSocket.getInputStream() ); //new BufferedReader( new InputStreamReader(connectionSocket.getInputStream())));
 
       WebResponse resp;
       WebRequest req = new WebRequest();
       if (!req.fromString(requestString)) { // check if there are parse errors
-        resp = new WebResponse("ERROR");
+        resp = WebResponse.badRequestResponse(serverName);
       }
       else // no parse errors
       {
         resp = generateResponse(req);
       }
       String respString = resp.toString();
-      writeResponse(respString, connectionSocket.getOutputStream());
+      writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
     }
 
   }
@@ -70,7 +78,8 @@ public class SequentialServer{
     return listenSocket.accept();
   }
 
-  protected String readRequest(BufferedReader br) throws IOException {
+  protected String readRequest(InputStream in) throws IOException {
+    BufferedReader br = new BufferedReader( new InputStreamReader(in));
     StringBuffer sb = new StringBuffer();
 
     String line = br.readLine();
@@ -79,7 +88,7 @@ public class SequentialServer{
       sb.append(line + "\r\n");
       line = br.readLine();
     }
-    System.out.println("request= " + sb.toString());
+    //System.out.println("request= " + sb.toString());
     return sb.toString();
   }
 
@@ -99,6 +108,7 @@ public class SequentialServer{
     } catch (Exception e) {
       return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
     }
+      // return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
   }
 
   /*
@@ -107,7 +117,7 @@ public class SequentialServer{
    * Throws IOException if precondition does not hold
    */
   public WebResponse respondWithFile(File f) throws IOException {
-    long length = f.length();
+    int length = (int) f.length(); //TODO(syu): handle files of size greater than INT_MAX bytes?
 
     String contentType;
     if (f.getPath().endsWith(".jpg"))
@@ -120,16 +130,15 @@ public class SequentialServer{
       contentType = "text/plain";
 
     FileInputStream fileStream  = new FileInputStream(f);
-    byte[] content = new byte[(int) length]; //TODO(syu): handle files of size greater than INT_MAX bytes?
+    byte[] content = new byte[length]; 
     fileStream.read(content);
-    System.out.println("content from file: " + f.getPath() + "\t" + new String(content));
+    // System.out.println("content from file: " + f.getPath() + "\t" + new String(content));
 
     return WebResponse.okResponse(serverName, contentType, length, content);
   }
 
-  protected void writeResponse(String responseString, OutputStream out) throws IOException {
-    // DataOutputStream outToClient = new DataOutputStream(out);
-    //  outToClient.writeBytes(responseString);
+  protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
+    out.writeBytes(responseString);
   }
 
 
@@ -138,7 +147,7 @@ public class SequentialServer{
 
     try {
       SequentialServer ss = createFromArgs(args);
-      ss.handleRequests();
+      (new Thread(ss)).start();
     }
     catch (NumberFormatException e)
     {
