@@ -51,7 +51,7 @@ public class SequentialServerTest {
     }
 
   @Test
-    public void  handleRequests() throws IOException, InterruptedException {
+    public void handleRequests() throws IOException, InterruptedException {
 
       WebRequest req1 = new WebRequest("testfile");
       WebRequest req2 = new WebRequest("testfile.jpg");
@@ -84,9 +84,6 @@ public class SequentialServerTest {
       System.out.println("actual 1: " + reqs.get(0).inspect());
       System.out.println("cmp = " + req1.equals(reqs.get(0)));
 
-      assertTrue("cmp", req1.equals(reqs.get(0)));
-      assertTrue("cmp", req2.equals(reqs.get(1)));
-      assertTrue("cmp", req3.equals(reqs.get(2)));
       assertEquals(req1.toString(), reqs.get(0).toString());
       assertEquals(req2.toString(), reqs.get(1).toString());
       assertEquals(req3.toString(), reqs.get(2).toString());
@@ -96,22 +93,14 @@ public class SequentialServerTest {
       // System.out.println("request 1: " + req1.inspect());
       // System.out.println("actual 1: " + reqs.get(0).inspect());
       // System.out.println("cmp = " + req1.equals(reqs.get(0)));
-      // 
+
       WebResponse resp1 = WebResponse.okResponse(ssSpy.serverName, "text/plain", 9, "herpderp\n".getBytes()) ;
       WebResponse resp2 = WebResponse.okResponse(ssSpy.serverName, "image/jpeg", 9, "herpderp\n".getBytes()) ;
       WebResponse resp3 = WebResponse.fileNotFoundResponse(ssSpy.serverName);
 
-      System.out.println("resp 1: " + resp);
-      System.out.println("actual1 1: " + resps.get(0));
-      // assertArrayEquals(resp1.content, resps.get(0).content);
       assertEquals(resp1.toString(), resps.get(0).toString());
       assertEquals(resp2.toString(), resps.get(1).toString());
       assertEquals(resp3.toString(), resps.get(2).toString());
-
-      // assertEquals(req1, reqs.get(0));
-      // assertEquals(req2, reqs.get(1));
-      // assertEquals(req3, reqs.get(2));
-
     }
 
   @Test

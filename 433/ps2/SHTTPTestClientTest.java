@@ -10,7 +10,7 @@ import org.mockito.stubbing.*;
 import org.mockito.invocation.*;
 import org.mockito.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import org.mockito.verification.*;
 
@@ -31,11 +31,12 @@ public class SHTTPTestClientTest {
   @Test
     public void testParseArgs() throws Exception {
       doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
-      stc = SHTTPTestClient.createFromArgs(new String[]{"-server", "localhost", "-port", "12345", "-parallel", "4", "-files", "test.txt", "-T", "10" });
+      stc = SHTTPTestClient.createFromArgs(new String[]{"-server", "localhost", "-port", "12345", "-parallel", "4", "-files", "files.txt", "-T", "10" });
       assertEquals(stc.server, "localhost");
       assertEquals(stc.port, 12345);
       assertEquals(stc.threadCount, 4);
-      assertEquals(stc.infile, "test.txt");
+      assertEquals(stc.infile, "files.txt");
+      assertArrayEquals(stc.filenames, new String[]{"a.txt","bbbbb", "ccccc", "d.jpg"});
       assertEquals(stc.timeout, 10);
     }
 
@@ -60,12 +61,9 @@ public class SHTTPTestClientTest {
       spyStc.executor = executor;
       doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
       doReturn(new GetFileTasks()).when(spyStc).createGetFileTask(any(Socket.class), any(String[].class), anyInt());
-      try {
+      // try {
         spyStc.start();
-      } catch (ConnectException e)
-      {
-        e.printStackTrace();
-      }
+      // } catch (ConnectException e) { e.printStackTrace(); }
       verify(executor, timeout(spyStc.timeout * 1000).times(5)).execute((Runnable) anyObject());
     }
 

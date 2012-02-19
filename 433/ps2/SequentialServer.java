@@ -56,6 +56,7 @@ public class SequentialServer implements Runnable{
     Socket connectionSocket;
     while (alive) {
       connectionSocket = acceptIncomingConnection(); // blocking
+      System.out.println("...waiting for request");
 
       String requestString = readRequest( connectionSocket.getInputStream() ); //new BufferedReader( new InputStreamReader(connectionSocket.getInputStream())));
 
@@ -69,13 +70,19 @@ public class SequentialServer implements Runnable{
         resp = generateResponse(req);
       }
       String respString = resp.toString();
-      writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
+      try{
+        writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
+      }
+      catch (SocketException e) {System.out.println("...Client hung up"); }
     }
 
   }
 
   public Socket acceptIncomingConnection() throws IOException {
-    return listenSocket.accept();
+    System.out.print(" Accepting connection...");
+    Socket socket =  listenSocket.accept();
+    System.out.println("from" +socket.getLocalAddress() + ":" +socket.getPort() );
+    return socket;
   }
 
   protected String readRequest(InputStream in) throws IOException {
@@ -83,12 +90,14 @@ public class SequentialServer implements Runnable{
     StringBuffer sb = new StringBuffer();
 
     String line = br.readLine();
+    System.out.println(line);
     while(line != null && !line.equals(""))
     {
+      System.out.println(line);
       sb.append(line + "\r\n");
       line = br.readLine();
     }
-    //System.out.println("request= " + sb.toString());
+    System.out.println("...request= " + sb.toString());
     return sb.toString();
   }
 
@@ -138,6 +147,7 @@ public class SequentialServer implements Runnable{
   }
 
   protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
+    System.out.println("...writing response: " + WebRequest.inspect(responseString));
     out.writeBytes(responseString);
   }
 

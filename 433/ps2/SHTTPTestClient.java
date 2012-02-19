@@ -30,6 +30,7 @@ class GetFileTasks implements Runnable {
   protected String server;
   protected int port;
   protected String[] filenames;
+  protected int fileInd = 0;
 
   long startTime;
   long endTime;
@@ -39,35 +40,38 @@ class GetFileTasks implements Runnable {
   public void run () {
     boolean timeup = true;
 
-    int i = 0;
     while(timeup)
     {
       try {
         Thread.sleep(100);
         nextRequest();
-      } 
+      }
       catch (InterruptedException e) {timeup = false; }
       catch (IOException e) {e.printStackTrace(); }
     }
   }
 
   public String requestFileMessage(String fn) {
-    return "GET " + fn + " HTTP/1.0\n\r\n";
+    return "GET " + fn + " HTTP/1.0\r\n\r\n";
   }
 
-  int fileInd = 0;
+
   void nextRequest() throws IOException {
+    System.out.println("thread#" + this.hashCode() + ":\tpreparing to get " + filenames[fileInd]);
     getFile(filenames[fileInd]);
     fileInd = (fileInd + 1) % filenames.length;
   }
 
   void getFile(String fn) throws IOException {
-    System.out.println("hashcode = " + this.hashCode() + "\tserver = " + server);
-    writeMessage(requestFileMessage(fn));
+    String rfm = requestFileMessage(fn);
+    System.out.println("...preparing to write message:" + WebRequest.inspect(rfm));
+    writeMessage(rfm);
   }
 
   void writeMessage(String s) throws IOException {
+    System.out.print("...writing...");
     dataOutputStream.writeBytes(s);
+    System.out.println("...written");
   }
 
   // time out is in seconds
@@ -79,16 +83,9 @@ class GetFileTasks implements Runnable {
     this.endTime = startTime + timeout * 1000;
   }
 
-  /*
-     public GetFileTasks(String server, int port, String[] filenames, int timeout) throws IOException {
-     this.clientSocket = new Socket(InetAddress.getByName(server), port);
-     this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
-     this.startTime = System.currentTimeMillis();
-     this.endTime = startTime + timeout * 1000;
-     }
-     */
   public GetFileTasks() {
   }
+
 }
 
 public class SHTTPTestClient {
@@ -132,30 +129,43 @@ public class SHTTPTestClient {
     return new GetFileTasks(s, filenames, timeout);
   }
 
-  public void start() throws Exception {
-    for (int i = 0; i< threadCount; i++)
-      // executor.execute(new GetFileTasks((Socket) clientSocket.clone(), filenames, timeout));
-      // executor.execute(new GetFileTasks(new Socket(InetAddress.getByName(server), port), filenames, timeout));
-      // executor.execute(new GetFileTasks(getSocket(server, port), filenames, timeout));
-      executor.execute(createGetFileTask(getSocket(server, port), filenames, timeout));
-    Thread.sleep(timeout * 1000);
-    executor.shutdownNow();
-    System.out.println("End start");
+  public void start()  {
+    try{
+      for (int i = 0; i< threadCount; i++)
+        executor.execute(createGetFileTask(getSocket(server, port), filenames, timeout));
+      Thread.sleep(timeout * 1000);
+      executor.shutdownNow();
+      System.out.println("End start");
+    }
+    catch (IOException e) { e.printStackTrace(); }
+    //catch (UnknownHostException e) { e.printStackTrace(); }
+    catch (InterruptedException e) { e.printStackTrace(); }
+
   }
 
   // %java SHTTPTestClient -server <server> -port <server port> -parallel <# of threads> -files <file name> -T <time of test in seconds>
   public static void main(String[] args) {
+    SHTTPTestClient stc = null;
     try {
-      SHTTPTestClient stc = createFromArgs(args);
-      stc.start();
-    } catch (Exception e)
+      stc = createFromArgs(args);
+    } catch (NumberFormatException e)
+    {
+      System.out.println("Usage: java SHTTPTestClient -server <server> -port <server port> -parallel <# of threads> -files <file name> -T <time of test in seconds>");
+    } catch (ArrayIndexOutOfBoundsException e)
     {
       System.out.println("Usage: java SHTTPTestClient -server <server> -port <server port> -parallel <# of threads> -files <file name> -T <time of test in seconds>");
     }
+    catch (IOException e)
+    {
+      System.out.println("Couldn't open file" + e.getMessage());
+    }
+    if (stc != null)
+      stc.start();
+
 
   }
 
-  public static SHTTPTestClient createFromArgs(String[] args) throws NumberFormatException, ArrayIndexOutOfBoundsException {
+  public static SHTTPTestClient createFromArgs(String[] args) throws NumberFormatException, ArrayIndexOutOfBoundsException, IOException {
     String server = "";
     int port = 0;
     int threadCount = 0;
@@ -190,6 +200,17 @@ public class SHTTPTestClient {
       }
     }
     SHTTPTestClient stc = new SHTTPTestClient(server, port, threadCount, infile, timeout);
+
+    ArrayList<String> files = new ArrayList<String>();
+    BufferedReader br = new BufferedReader(new FileReader(infile));
+    while(br.ready())
+    {
+      String s = br.readLine();
+      files.add(s);
+      System.out.println(s);
+    }
+    stc.filenames = files.toArray(new String[]{});
+
 
     return stc;
 

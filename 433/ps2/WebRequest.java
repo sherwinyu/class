@@ -29,7 +29,7 @@ public class WebRequest {
     s += ", userAgent: " + inspect(userAgent);
     return s;
   }
-  public String inspect(String in)
+  public static String inspect(String in)
   {
     String s = "";
     if (in == null) return "NULL";
