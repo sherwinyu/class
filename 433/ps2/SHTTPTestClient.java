@@ -35,7 +35,7 @@ class GetFileTasks implements Runnable {
   long startTime;
   long endTime;
   DataOutputStream dataOutputStream;
-  Socket clientSocket;
+  InetSocketAddress addr;
 
   public void run () {
     boolean timeup = true;
@@ -44,11 +44,20 @@ class GetFileTasks implements Runnable {
     {
       try {
         Thread.sleep(100);
+        setUpConnection();
         nextRequest();
       }
       catch (InterruptedException e) {timeup = false; }
       catch (IOException e) {e.printStackTrace(); }
     }
+  }
+  public void setUpConnection() throws IOException {
+    System.out.print("Setting up connection" + addr);
+    Socket s = new Socket();
+    s.connect(addr);
+    //  s.connect();
+    dataOutputStream = new DataOutputStream(s.getOutputStream());
+    System.out.println("...done Setting up connection with ..." + s);
   }
 
   public String requestFileMessage(String fn) {
@@ -75,10 +84,10 @@ class GetFileTasks implements Runnable {
   }
 
   // time out is in seconds
-  public GetFileTasks(Socket sock, String[] filenames, int timeout) throws IOException {
-    this.clientSocket = sock;
+  public GetFileTasks(InetSocketAddress addr, String[] filenames, int timeout) throws IOException {
+    this.addr = addr;
     this.filenames = filenames;
-    this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+    this.dataOutputStream = null; 
     this.startTime = System.currentTimeMillis();
     this.endTime = startTime + timeout * 1000;
   }
@@ -91,7 +100,7 @@ class GetFileTasks implements Runnable {
 public class SHTTPTestClient {
   protected String server;
   protected int port;
-  protected Socket clientSocket;
+  protected InetSocketAddress addr;
 
   protected int threadCount;
   protected String infile;
@@ -99,40 +108,32 @@ public class SHTTPTestClient {
   protected int timeout;
   protected ExecutorService executor;
 
-  public SHTTPTestClient(String server, int port, int threadCount, String infile, int timeout) {
+  public SHTTPTestClient(String server, int port, int threadCount, String infile, int timeout) throws UnknownHostException {
     this.server = server;
     this.port = port;
+    InetSocketAddress isa = new InetSocketAddress(InetAddress.getByName(server), port);
+    this.addr = isa;
     this.threadCount = threadCount;
     this.infile = infile;
     this.timeout = timeout;
-    try {
-      this.clientSocket = getSocket(server, port);
-    } catch (Exception e) {e.printStackTrace();}
     this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
   }
 
-  public SHTTPTestClient(Socket sock, int threadCount, String infile, int timeout) {
-    this.threadCount = threadCount;
-    this.infile = infile;
-    this.timeout = timeout;
-    this.clientSocket = sock;
-    this.executor = new ScheduledThreadPoolExecutor(this.threadCount);
+  public SHTTPTestClient(InetSocketAddress addr, int threadCount, String infile, int timeout) throws UnknownHostException {
+    this(addr.getHostName(), addr.getPort(), threadCount, infile, timeout);
   }
 
   /* Factory method for testing */
-  public Socket getSocket(String s, int p) throws UnknownHostException, IOException  {
-    return new Socket(InetAddress.getByName(s), p);
-  }
-
-  /* Factory method for testing */
-  public GetFileTasks createGetFileTask(Socket s, String[] filenames, int timeout) throws UnknownHostException, IOException  {
+  public GetFileTasks createGetFileTask(InetSocketAddress s, String[] filenames, int timeout) throws UnknownHostException, IOException  {
     return new GetFileTasks(s, filenames, timeout);
   }
 
   public void start()  {
+    System.out.println("Beginning to send requests to " + addr);
     try{
       for (int i = 0; i< threadCount; i++)
-        executor.execute(createGetFileTask(getSocket(server, port), filenames, timeout));
+        // executor.execute(createGetFileTask(getSocket(server, port), filenames, timeout));
+        executor.execute(createGetFileTask(addr, filenames, timeout));
       Thread.sleep(timeout * 1000);
       executor.shutdownNow();
       System.out.println("End start");
@@ -166,6 +167,7 @@ public class SHTTPTestClient {
   }
 
   public static SHTTPTestClient createFromArgs(String[] args) throws NumberFormatException, ArrayIndexOutOfBoundsException, IOException {
+    System.out.println("args: " + Arrays.toString(args));
     String server = "";
     int port = 0;
     int threadCount = 0;
@@ -196,6 +198,7 @@ public class SHTTPTestClient {
       }
       if (args[i].equals("-T")) {
         timeout = Integer.parseInt(args[i+1]);
+        System.out.println("timeout: " + timeout);
         continue;
       }
     }

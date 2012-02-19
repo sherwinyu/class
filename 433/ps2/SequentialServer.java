@@ -86,11 +86,17 @@ public class SequentialServer implements Runnable{
   }
 
   protected String readRequest(InputStream in) throws IOException {
+    System.out.println("...");
+    // System.out.println("...read: " +  in.read());
+
     BufferedReader br = new BufferedReader( new InputStreamReader(in));
     StringBuffer sb = new StringBuffer();
 
+
+
     String line = br.readLine();
     System.out.println(line);
+
     while(line != null && !line.equals(""))
     {
       System.out.println(line);
