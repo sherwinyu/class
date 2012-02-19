@@ -1,6 +1,10 @@
+package com.sherwinyu.cs433.ps2;
+
 import java.util.*;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
+
+import static com.sherwinyu.cs433.ps2.Utils.*;
 
 public class WebRequest {
   static SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
@@ -20,31 +24,13 @@ public class WebRequest {
     // if (!this.userAgent.equals(other.userAgent)) return false;
     return true;
   }
-  public String inspect()
+  public String describe()
   {
     String s = "";
     s += "method: " + inspect(method);
     s += ", urlName: " + inspect(urlName);
     s += ", ifModifiedSince: " + ifModifiedSince;
     s += ", userAgent: " + inspect(userAgent);
-    return s;
-  }
-  public static String inspect(String in)
-  {
-    String s = "";
-    if (in == null) return "NULL";
-
-    for (int i = 0; i < in.length(); i++)
-    {
-
-      if (in.charAt(i) == '\n')
-        s += "NEWLINE";
-      else if (in.charAt(i) == '\r')
-        s += "CARRIAGE";
-      else
-        s += ("" + in.charAt(i));
-
-    }
     return s;
   }
 

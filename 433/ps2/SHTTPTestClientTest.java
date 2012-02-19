@@ -1,3 +1,5 @@
+package com.sherwinyu.cs433.ps2;
+
 import org.junit.Test;
 import org.junit.*;
 import java.net.*;
@@ -32,7 +34,7 @@ public class SHTTPTestClientTest {
 
   @Test
     public void testParseArgs() throws Exception {
-      doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
+      // doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
       stc = SHTTPTestClient.createFromArgs(new String[]{"-server", "localhost", "-port", "12345", "-parallel", "4", "-files", "files.txt", "-T", "10" });
       assertEquals("server", stc.server, "localhost");
       assertEquals("port", stc.port, 12345);
@@ -61,7 +63,7 @@ public class SHTTPTestClientTest {
       // ScheduledThreadPoolExecutor spyExec = spy(executor);
       // when(executor.execute((Runnable) anyObject)).(doNothing);
       spyStc.executor = executor;
-      doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
+      // doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
       doReturn(new GetFileTasks()).when(spyStc).createGetFileTask(any(InetSocketAddress.class), any(String[].class), anyInt());
       // try {
         spyStc.start();
@@ -70,14 +72,20 @@ public class SHTTPTestClientTest {
     }
 
   @Test
-    public void testGetFile() throws Exception {
+    public void testProcessFile() throws Exception {
       GetFileTasks gft = new GetFileTasks();
       GetFileTasks gftSpy = spy(gft);
       doNothing().when(gftSpy).writeMessage(anyString());
 
-      gftSpy.getFile("file1.txt");
-      gftSpy.getFile("file2.txt");
-      gftSpy.getFile("file3.txt");
+      gftSpy.processFile("file1.txt");
+      gftSpy.processFile("file2.txt");
+      gftSpy.processFile("file3.txt");
+
+      doAnswer( new Answer() {
+          public String answer(InvocationOnMock inv) {
+            return  WebResponse.okResponse("servername", "text/plain", 9, "herpderp\n".getBytes()).toString();
+          }
+      } ).when(gftSpy).receiveResponse();
 
       ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
       verify(gftSpy, times(3)).writeMessage(captor.capture());
@@ -86,6 +94,7 @@ public class SHTTPTestClientTest {
       assertEquals(gftSpy.requestFileMessage("file1.txt"), args.get(0));
       assertEquals(gftSpy.requestFileMessage("file2.txt"), args.get(1));
       assertEquals(gftSpy.requestFileMessage("file3.txt"), args.get(2));
+
     }
 
   /*
@@ -133,7 +142,7 @@ public class SHTTPTestClientTest {
         gftSpy.nextRequest();
 
       ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-      verify(gftSpy, times(7)).getFile(captor.capture());
+      verify(gftSpy, times(7)).processFile(captor.capture());
       List<String> args = captor.getAllValues();
 
       assertEquals(filenames[0], args.get(0));

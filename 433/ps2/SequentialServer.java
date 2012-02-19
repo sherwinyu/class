@@ -1,3 +1,5 @@
+package com.sherwinyu.cs433.ps2;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -46,7 +48,7 @@ public class SequentialServer implements Runnable{
   public void run()
   {
     try {
-    this.handleRequests();
+      this.handleRequests();
     } catch (Exception e) {e.printStackTrace(); }
   }
 
@@ -58,7 +60,7 @@ public class SequentialServer implements Runnable{
       connectionSocket = acceptIncomingConnection(); // blocking
       System.out.println("...waiting for request");
 
-      String requestString = readRequest( connectionSocket.getInputStream() ); //new BufferedReader( new InputStreamReader(connectionSocket.getInputStream())));
+      String requestString = readRequest( connectionSocket.getInputStream() );
 
       WebResponse resp;
       WebRequest req = new WebRequest();
@@ -75,24 +77,19 @@ public class SequentialServer implements Runnable{
       }
       catch (SocketException e) {System.out.println("...Client hung up"); }
     }
-
   }
 
   public Socket acceptIncomingConnection() throws IOException {
-    System.out.print(" Accepting connection...");
+    System.out.println("\nAccepting connection...");
     Socket socket =  listenSocket.accept();
-    System.out.println("from" +socket.getLocalAddress() + ":" +socket.getPort() );
+    System.out.println("Accepted from" +socket.getLocalAddress() + ":" +socket.getPort() );
     return socket;
   }
 
   protected String readRequest(InputStream in) throws IOException {
-    System.out.println("...");
-    // System.out.println("...read: " +  in.read());
 
     BufferedReader br = new BufferedReader( new InputStreamReader(in));
     StringBuffer sb = new StringBuffer();
-
-
 
     String line = br.readLine();
     System.out.println(line);
@@ -123,7 +120,7 @@ public class SequentialServer implements Runnable{
     } catch (Exception e) {
       return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
     }
-      // return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
+    // return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
   }
 
   /*
@@ -145,15 +142,14 @@ public class SequentialServer implements Runnable{
       contentType = "text/plain";
 
     FileInputStream fileStream  = new FileInputStream(f);
-    byte[] content = new byte[length]; 
+    byte[] content = new byte[length];
     fileStream.read(content);
-    // System.out.println("content from file: " + f.getPath() + "\t" + new String(content));
 
     return WebResponse.okResponse(serverName, contentType, length, content);
   }
 
   protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
-    System.out.println("...writing response: " + WebRequest.inspect(responseString));
+    // System.out.println("...writing response: " + WebRequest.inspect(responseString));
     out.writeBytes(responseString);
   }
 

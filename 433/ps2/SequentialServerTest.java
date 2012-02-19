@@ -1,3 +1,5 @@
+package com.sherwinyu.cs433.ps2;
+
 import org.junit.Test;
 import org.junit.*;
 import java.net.*;
@@ -80,8 +82,8 @@ public class SequentialServerTest {
 
       verify(ssSpy, atLeast(3)).generateResponse(reqCaptor.capture());
       List<WebRequest> reqs = reqCaptor.getAllValues();
-      System.out.println("request 1: " + req1.inspect());
-      System.out.println("actual 1: " + reqs.get(0).inspect());
+      System.out.println("request 1: " + req1.describe());
+      System.out.println("actual 1: " + reqs.get(0).describe());
       System.out.println("cmp = " + req1.equals(reqs.get(0)));
 
       assertEquals(req1.toString(), reqs.get(0).toString());

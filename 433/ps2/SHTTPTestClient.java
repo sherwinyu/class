@@ -20,82 +20,13 @@
    */
 
 
+package com.sherwinyu.cs433.ps2;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
-
-class GetFileTasks implements Runnable {
-  protected String server;
-  protected int port;
-  protected String[] filenames;
-  protected int fileInd = 0;
-
-  long startTime;
-  long endTime;
-  DataOutputStream dataOutputStream;
-  InetSocketAddress addr;
-
-  public void run () {
-    boolean timeup = true;
-
-    while(timeup)
-    {
-      try {
-        Thread.sleep(100);
-        setUpConnection();
-        nextRequest();
-      }
-      catch (InterruptedException e) {timeup = false; }
-      catch (IOException e) {e.printStackTrace(); }
-    }
-  }
-  public void setUpConnection() throws IOException {
-    System.out.print("Setting up connection" + addr);
-    Socket s = new Socket();
-    s.connect(addr);
-    //  s.connect();
-    dataOutputStream = new DataOutputStream(s.getOutputStream());
-    System.out.println("...done Setting up connection with ..." + s);
-  }
-
-  public String requestFileMessage(String fn) {
-    return "GET " + fn + " HTTP/1.0\r\n\r\n";
-  }
-
-
-  void nextRequest() throws IOException {
-    System.out.println("thread#" + this.hashCode() + ":\tpreparing to get " + filenames[fileInd]);
-    getFile(filenames[fileInd]);
-    fileInd = (fileInd + 1) % filenames.length;
-  }
-
-  void getFile(String fn) throws IOException {
-    String rfm = requestFileMessage(fn);
-    System.out.println("...preparing to write message:" + WebRequest.inspect(rfm));
-    writeMessage(rfm);
-  }
-
-  void writeMessage(String s) throws IOException {
-    System.out.print("...writing...");
-    dataOutputStream.writeBytes(s);
-    System.out.println("...written");
-  }
-
-  // time out is in seconds
-  public GetFileTasks(InetSocketAddress addr, String[] filenames, int timeout) throws IOException {
-    this.addr = addr;
-    this.filenames = filenames;
-    this.dataOutputStream = null; 
-    this.startTime = System.currentTimeMillis();
-    this.endTime = startTime + timeout * 1000;
-  }
-
-  public GetFileTasks() {
-  }
-
-}
 
 public class SHTTPTestClient {
   protected String server;
@@ -132,14 +63,12 @@ public class SHTTPTestClient {
     System.out.println("Beginning to send requests to " + addr);
     try{
       for (int i = 0; i< threadCount; i++)
-        // executor.execute(createGetFileTask(getSocket(server, port), filenames, timeout));
-        executor.execute(createGetFileTask(addr, filenames, timeout));
+        executor.execute(createGetFileTask(addr, filenames, timeout)); //TODO(syu): pass in data structure for collecint stat summary; remove factory method
       Thread.sleep(timeout * 1000);
       executor.shutdownNow();
-      System.out.println("End start");
+      System.out.println("Terminating.");
     }
     catch (IOException e) { e.printStackTrace(); }
-    //catch (UnknownHostException e) { e.printStackTrace(); }
     catch (InterruptedException e) { e.printStackTrace(); }
 
   }
@@ -214,8 +143,6 @@ public class SHTTPTestClient {
     }
     stc.filenames = files.toArray(new String[]{});
 
-
     return stc;
-
   }
 }
