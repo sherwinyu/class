@@ -11,6 +11,8 @@ public class SequentialServer implements Runnable{
   ServerSocket listenSocket;
   public boolean alive = true;
 
+  RequestHandler rh;
+
   //public static String WWW_ROOT = "/home/httpd/html/zoo/classes/cs433/";
   public String WWW_ROOT = "./";
 
@@ -57,8 +59,7 @@ public class SequentialServer implements Runnable{
     Socket connectionSocket;
     while (alive) {
       connectionSocket = acceptIncomingConnection(); // blocking
-      System.out.println("hi --- verify");
-      RequestHandler rh = new RequestHandler(connectionSocket, WWW_ROOT, serverName);
+      rh = getRequestHandler(connectionSocket, WWW_ROOT, serverName);
       rh.handleRequest();
     }
   }
@@ -70,7 +71,9 @@ public class SequentialServer implements Runnable{
     return socket;
   }
 
-
+  public RequestHandler getRequestHandler(Socket connectionSocket, String documentRoot, String serverName) {
+    return new RequestHandler(connectionSocket, documentRoot, serverName);
+  }
 
   public static void main(String args[]) throws Exception  {
 

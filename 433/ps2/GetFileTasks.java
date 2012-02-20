@@ -40,15 +40,19 @@ public class GetFileTasks implements Runnable {
 
 
       }
-      catch (IOException e) {e.printStackTrace(); }
+      catch (IOException e) {
+        timeup = false;
+        System.out.println("IOError occured. " + e.getMessage());
+      }
     }
   }
 
   public void setUpConnection() throws IOException {
     System.out.print("Setting up connection" + addr);
-    this.socket = new Socket();
-    this.socket.connect(this.addr);
-    this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
+      this.socket = new Socket();
+      this.socket.connect(this.addr);
+      this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
+
     System.out.println("...done setting up connection with ..." + this.socket);
   }
 

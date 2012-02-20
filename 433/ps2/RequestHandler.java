@@ -45,7 +45,6 @@ public class RequestHandler implements Runnable {
   }
 
   protected String readRequest(InputStream in) throws IOException {
-
     BufferedReader br = new BufferedReader( new InputStreamReader(in));
     StringBuffer sb = new StringBuffer();
 
