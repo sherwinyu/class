@@ -1,4 +1,4 @@
-package com.sherwinyu.cs433.ps2;
+// package com.sherwinyu.cs433.ps2;
 
 import java.io.*;
 import java.net.*;
@@ -6,13 +6,15 @@ import java.util.*;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 
-import static com.sherwinyu.cs433.ps2.Utils.*;
+import static syu.Utils.*;
 
 public class GetFileTasks implements Runnable {
   protected String server;
   protected int port;
   protected String[] filenames;
   protected int fileInd = 0;
+  ArrayList<Integer> fileSizes = new ArrayList<Integer>();
+  ArrayList<Integer> delays = new ArrayList<Integer>();
 
   long startTime;
   long endTime;
@@ -22,15 +24,22 @@ public class GetFileTasks implements Runnable {
 
   public void run () {
     boolean timeup = true;
-
-    while(timeup)
-    {
+    while(timeup) {
       try {
         Thread.sleep(100);
         setUpConnection();
         nextRequest();
       }
-      catch (InterruptedException e) {timeup = false; }
+      catch (InterruptedException e) {
+        timeup = false;
+        //reportStats(); TODO(syu) implement this
+        // System.out.println("File sizes: " + Arrays.toString(this.fileSizes));
+        // System.out.println("Delays: " + Arrays.toString(this.delays));
+        System.out.println("File sizes: " + this.fileSizes);
+        System.out.println("Delays: " + this.delays);
+
+
+      }
       catch (IOException e) {e.printStackTrace(); }
     }
   }
@@ -58,6 +67,20 @@ public class GetFileTasks implements Runnable {
     System.out.println("...preparing to write message:" + inspect(rfm));
     writeMessage(rfm);
     long ts = System.currentTimeMillis();
+    String resp = receiveResponse();
+
+    long delay = System.currentTimeMillis() - ts;
+    int size = resp.getBytes().length;
+    collectStats(size, (int) delay);
+    System.out.println("...Received response: " + resp);
+    System.out.println("...Delay " + (int) delay);
+    System.out.println("...size " + size);
+  }
+
+  void collectStats(int size, int delay)
+  {
+    this.delays.add( delay);
+    this.fileSizes.add(size);
   }
 
   void writeMessage(String s) throws IOException {
@@ -65,6 +88,8 @@ public class GetFileTasks implements Runnable {
   }
 
   String receiveResponse() throws IOException {
+
+    p("...receiving Response");
     return new Scanner(socket.getInputStream()).useDelimiter("\\A").next();
   }
 

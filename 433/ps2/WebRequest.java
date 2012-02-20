@@ -1,10 +1,10 @@
-package com.sherwinyu.cs433.ps2;
+// package com.sherwinyu.cs433.ps2;
 
 import java.util.*;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
-import static com.sherwinyu.cs433.ps2.Utils.*;
+import static syu.Utils.*;
 
 public class WebRequest {
   static SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");

@@ -1,4 +1,4 @@
-package com.sherwinyu.cs433.ps2;
+// package com.sherwinyu.cs433.ps2;
 
 import org.junit.Test;
 import org.junit.*;
@@ -11,6 +11,8 @@ import java.util.Arrays;
 import org.mockito.stubbing.*;
 import org.mockito.invocation.*;
 import org.mockito.*;
+
+import syu.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -58,12 +60,8 @@ public class SHTTPTestClientTest {
 
   @Test
     public void testStart() throws Exception {
-      // ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(stc.threadCount);
       ExecutorService executor = mock(ScheduledThreadPoolExecutor.class);
-      // ScheduledThreadPoolExecutor spyExec = spy(executor);
-      // when(executor.execute((Runnable) anyObject)).(doNothing);
       spyStc.executor = executor;
-      // doReturn(new Socket()).when(spyStc).getSocket(anyString(), anyInt());
       doReturn(new GetFileTasks()).when(spyStc).createGetFileTask(any(InetSocketAddress.class), any(String[].class), anyInt());
       // try {
         spyStc.start();
@@ -72,14 +70,18 @@ public class SHTTPTestClientTest {
     }
 
   @Test
+  @SuppressWarnings("unchecked")
     public void testProcessFile() throws Exception {
       GetFileTasks gft = new GetFileTasks();
       GetFileTasks gftSpy = spy(gft);
-      doNothing().when(gftSpy).writeMessage(anyString());
 
-      gftSpy.processFile("file1.txt");
-      gftSpy.processFile("file2.txt");
-      gftSpy.processFile("file3.txt");
+      ArrayList<Integer> sizesMock = (ArrayList<Integer>) mock(ArrayList.class);
+      ArrayList<Integer> delaysMock = (ArrayList<Integer>) mock(ArrayList.class);
+      gft.fileSizes = sizesMock;
+      gft.delays = delaysMock;
+
+
+      doNothing().when(gftSpy).writeMessage(anyString());
 
       doAnswer( new Answer() {
           public String answer(InvocationOnMock inv) {
@@ -87,8 +89,20 @@ public class SHTTPTestClientTest {
           }
       } ).when(gftSpy).receiveResponse();
 
+      gftSpy.processFile("file1.txt");
+      gftSpy.processFile("file2.txt");
+      gftSpy.processFile("file3.txt");
+
+      System.out.println(sizesMock.size() + "\t " + gft.fileSizes.size(  ));
+      System.out.println(delaysMock.size() +"\t " + gft.delays.size() );
+
       ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
       verify(gftSpy, times(3)).writeMessage(captor.capture());
+      verify(gftSpy, times(3)).collectStats(anyInt(), anyInt());
+      // verify(sizesMock, times(3)).add(anyInt());
+      // verify(delaysMock, times(3)).add(anyInt());
+
+
       List<String> args = captor.getAllValues();
 
       assertEquals(gftSpy.requestFileMessage("file1.txt"), args.get(0));
@@ -124,12 +138,14 @@ public class SHTTPTestClientTest {
       expectedRequest = "GET " + urlStr + " HTTP/1.0\r\n\r\n";
       assertEquals(gft.requestFileMessage(urlStr), expectedRequest);
     }
+
   @Test
     public void testNextRequest() {
       try {
       GetFileTasks gft = new GetFileTasks();
       GetFileTasks gftSpy = spy(gft);
       doNothing().when(gftSpy).writeMessage(anyString());
+      doReturn("something").when(gftSpy).receiveResponse();
 
       String[] filenames = {"abc#def", "voice/b/0?pli=1#inbox", "test..test..test", "//\\/"};
       gftSpy.filenames = filenames;

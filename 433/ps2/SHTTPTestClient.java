@@ -20,7 +20,7 @@
    */
 
 
-package com.sherwinyu.cs433.ps2;
+// package com.sherwinyu.cs433.ps2;
 
 import java.io.*;
 import java.net.*;
@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 
 public class SHTTPTestClient {
+
   protected String server;
   protected int port;
   protected InetSocketAddress addr;

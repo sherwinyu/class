@@ -1,4 +1,4 @@
-package com.sherwinyu.cs433.ps2;
+// package com.sherwinyu.cs433.ps2;
 
 import org.junit.Test;
 import org.junit.*;
@@ -41,10 +41,7 @@ public class SequentialServerTest {
       ss.serverPort = 333;
       ss.setDocumentRoot(tmp.getRoot().getPath());
       ssSpy = spy(ss);
-
       cal=  Calendar.getInstance();
-
-
     }
 
   @Test
