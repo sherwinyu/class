@@ -14,16 +14,18 @@ public class ThreadPoolCompetingServer extends Server {
   protected ExecutorService threadPool;
 
   public ThreadPoolCompetingServer() throws IOException {
-    this(new ServerSocket(), NAME, ".");
+    this(new ServerSocket(), NAME, ".", NUM_DEFAULT_THREADS);
   }
 
-  public ThreadPoolCompetingServer(ServerSocket s, String serverName, String documentRoot) throws IOException {
-    this(s, serverName, documentRoot, NUM_DEFAULT_THREADS);
+  public ThreadPoolCompetingServer(int numThreads) throws IOException {
+    this(new ServerSocket(), NAME, ".", numThreads);
   }
+
 
   public ThreadPoolCompetingServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
     super(s, serverName, documentRoot);
-    this.threadPool = Executors.newFixedThreadPool(numThreads);
+    this.numThreads = numThreads;
+    this.threadPool = Executors.newFixedThreadPool(this.numThreads);
   }
 
   @Override
@@ -45,7 +47,7 @@ public class ThreadPoolCompetingServer extends Server {
         threadPool.shutdownNow();
     }
 
-  public RequestHandler newThreadPoolCompetingRequestHandler() {
+  public ThreadPoolCompetingRequestHandler  newThreadPoolCompetingRequestHandler() {
     return new ThreadPoolCompetingRequestHandler(this);
   }
 
@@ -71,7 +73,6 @@ public class ThreadPoolCompetingServer extends Server {
       System.out.println("IO Error. " + e.getMessage());
     }
   } // end of main
-
 
 }
 
