@@ -68,6 +68,7 @@ public class SequentialServerTest {
 
       RequestHandler rh = new RequestHandler(ssSpy, mockSocket);
       RequestHandler rhSpy = spy(rh);
+      rhSpy.id = "test id";
 
       doReturn(mockSocket).when(ssSpy).acceptIncomingConnection();
       doReturn(rhSpy).when(ssSpy).getRequestHandler(any(Socket.class));
@@ -75,7 +76,7 @@ public class SequentialServerTest {
       doNothing().when(rhSpy).writeResponse(anyString(), any(DataOutputStream.class));
 
       (new Thread(ssSpy)).start();
-      Thread.sleep(50);
+      Thread.sleep(100);
       ssSpy.alive = false;
 
       ArgumentCaptor<WebRequest> reqCaptor = ArgumentCaptor.forClass(WebRequest.class);

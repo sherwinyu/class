@@ -9,6 +9,7 @@ public class RequestHandler implements Runnable {
 
   protected Socket connectionSocket;
   protected Server parentServer;
+  protected String id;
 
   public RequestHandler (Server server, Socket connectionSocket) {
     this.parentServer = server;
@@ -30,7 +31,6 @@ public class RequestHandler implements Runnable {
     }
 
   public void handleRequest() throws IOException {
-
     String requestString = readRequest( connectionSocket.getInputStream() );
     WebResponse resp;
 

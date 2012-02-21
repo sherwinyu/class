@@ -31,6 +31,9 @@ public abstract class Server implements Runnable {
     this.listenSocket = sock;
     this.serverName = serverName;
     this.setDocumentRoot(documentRoot);
+
+    System.out.println("server listening at: " + listenSocket);
+    System.out.println("server www root: " + documentRoot);
   }
 
   public Server () {

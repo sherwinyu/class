@@ -26,7 +26,7 @@ public class WebRequestTest {
   private WebRequest req;
 
   @Before
-    public void setUp() throws UnknownHostException {
+    public void setUp() throws IOException {
       req = new WebRequest();
 
       mockServerSocket = mock(ServerSocket.class);

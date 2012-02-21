@@ -4,14 +4,13 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class SequentialServer extends Server implements Runnable {
-  static final String NAME = "SequentialServer";
-  protected RequestHandler rh;
-  protected int counter = 0;
+public class ThreadPerRequestServer extends SequentialServer {
 
-  public static SequentialServer createFromArgs(String[] args) throws NumberFormatException, BindException, FileNotFoundException, IOException {
+  static final String NAME = "ThreadPerRequestServer";
+  int numThreadsStarted;
 
-    // SequentialServer ss = new SequentialServer();
+  public static ThreadPerRequestServer createFromArgs(String[] args) throws NumberFormatException, BindException, FileNotFoundException, IOException {
+
     int port = -1;
     String docroot = "";
 
@@ -27,41 +26,35 @@ public class SequentialServer extends Server implements Runnable {
         docroot = toks[1];
     }
 
-    return new SequentialServer(new ServerSocket(port), NAME, ".");
+    return new ThreadPerRequestServer(new ServerSocket(port), NAME, ".");
   }
 
-  public SequentialServer(ServerSocket sock, String serverName, String documentRoot) throws IOException {
+  public ThreadPerRequestServer(ServerSocket sock, String serverName, String documentRoot) throws IOException {
     super(sock, serverName, documentRoot);
-    counter = 0;
+    numThreadsStarted = 0;
   }
 
-  public SequentialServer() throws IOException {
+  public ThreadPerRequestServer() throws IOException {
     this(new ServerSocket(), NAME, ".");
   }
 
-
+  @Override
   public void handleRequests() throws IOException {
 
     Socket connectionSocket;
     while (alive) {
       connectionSocket = acceptIncomingConnection(); // blocking
-      rh = getRequestHandler(connectionSocket);
-      rh.handleRequest();
+      RequestHandler rh = getRequestHandler(connectionSocket);
+      startNewThread(rh);
     }
   }
 
-  public Socket acceptIncomingConnection() throws IOException {
-    System.out.println("\nAccepting connection...");
-    Socket socket =  listenSocket.accept();
-    System.out.println("Accepted from" +socket.getLocalAddress() + ":" +socket.getPort() );
-    return socket;
+  public void startNewThread(RequestHandler rh) {
+      (new Thread(rh)).start();
+      numThreadsStarted++;
+      System.out.println(" Number of thread Started: " + numThreadsStarted);
   }
 
-  public RequestHandler getRequestHandler(Socket connectionSocket) {
-    RequestHandler temp = new RequestHandler(this, connectionSocket);
-    temp.id = "" + counter++;
-    return temp;
-  }
 
   public static void main(String args[]) {
 
@@ -70,7 +63,7 @@ public class SequentialServer extends Server implements Runnable {
       (new Thread(ss)).start();
     }
     catch (NumberFormatException e) {
-      System.out.println("Usage: java SequentialServer -config <config_file>");
+      System.out.println("Usage: java " + NAME + " -config <config_file>");
     }
     catch (FileNotFoundException e) {
       System.out.println(e.getMessage());
