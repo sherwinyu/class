@@ -38,7 +38,6 @@ public class SequentialServerTest {
       mockSocket = mock(Socket.class);
 
       ss = new SequentialServer();
-      ss.serverPort = 333;
       ss.setDocumentRoot(tmp.getRoot().getPath());
       ssSpy = spy(ss);
       cal = Calendar.getInstance();

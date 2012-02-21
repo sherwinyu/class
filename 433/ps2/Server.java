@@ -4,11 +4,11 @@ import java.util.*;
 
 public abstract class Server implements Runnable {
 
-  public int serverPort = 6789;
-  public String serverName = "GenericServer";
+  public String serverName;
+  public static final String NAME = "AbstractServer";
   ServerSocket listenSocket;
-  public boolean alive = true;
-  public String documentRoot = "./";
+  public boolean alive;
+  public String documentRoot;
 
   public void run()
   {
@@ -19,6 +19,13 @@ public abstract class Server implements Runnable {
 
   public abstract void handleRequests() throws IOException;
 
+  public Socket acceptIncomingConnection() throws IOException {
+    System.out.println("\nAccepting new connection...");
+    Socket socket =  listenSocket.accept();
+    System.out.println("...Accepted from" +socket.getLocalAddress() + ":" +socket.getPort() );
+    return socket;
+  }
+
 
   public void setDocumentRoot(String dirname) throws IOException {
     if ((new File(dirname)).exists())
@@ -28,6 +35,7 @@ public abstract class Server implements Runnable {
   }
 
   public Server (ServerSocket sock, String serverName, String documentRoot) throws IOException {
+    this.alive = true;
     this.listenSocket = sock;
     this.serverName = serverName;
     this.setDocumentRoot(documentRoot);
@@ -36,7 +44,8 @@ public abstract class Server implements Runnable {
     System.out.println("server www root: " + documentRoot);
   }
 
-  public Server () {
+  public Server () throws IOException {
+    this(new ServerSocket(), NAME, ".");
   }
 
 

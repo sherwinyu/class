@@ -33,7 +33,6 @@ public class WebRequestTest {
       mockSocket = mock(Socket.class);
 
       ss = new SequentialServer();
-      ss.serverPort = 333;
       ssSpy = spy(ss);
 
     }

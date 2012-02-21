@@ -15,6 +15,10 @@ public class RequestHandler implements Runnable {
     this.parentServer = server;
     this.connectionSocket = connectionSocket;
   }
+  public RequestHandler() {
+    parentServer = null;
+    connectionSocket = null;
+  }
 
   /*
      public RequestHandler (Socket connectionSocket, String documentRoot, String serverName) {

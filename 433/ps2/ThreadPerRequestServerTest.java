@@ -39,7 +39,6 @@ public class ThreadPerRequestServerTest {
       mockSocket = mock(Socket.class);
 
       server = new ThreadPerRequestServer();
-      server.serverPort = 333;
       server.setDocumentRoot(tmp.getRoot().getPath());
       serverSpy = spy(server);
       cal = Calendar.getInstance();

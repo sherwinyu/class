@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class SequentialServer extends Server implements Runnable {
+public class SequentialServer extends Server {
   static final String NAME = "SequentialServer";
   protected RequestHandler rh;
   protected int counter = 0;
@@ -40,6 +40,7 @@ public class SequentialServer extends Server implements Runnable {
   }
 
 
+  @Override
   public void handleRequests() throws IOException {
 
     Socket connectionSocket;
@@ -50,12 +51,6 @@ public class SequentialServer extends Server implements Runnable {
     }
   }
 
-  public Socket acceptIncomingConnection() throws IOException {
-    System.out.println("\nAccepting connection...");
-    Socket socket =  listenSocket.accept();
-    System.out.println("Accepted from" +socket.getLocalAddress() + ":" +socket.getPort() );
-    return socket;
-  }
 
   public RequestHandler getRequestHandler(Socket connectionSocket) {
     RequestHandler temp = new RequestHandler(this, connectionSocket);
