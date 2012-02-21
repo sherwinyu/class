@@ -1,4 +1,6 @@
 package syu;
+import java.io.*;
+import java.util.*;
 
 public class Utils
 {
@@ -25,5 +27,31 @@ public class Utils
   public static void pr(String in) {
     System.out.println(in);
   }
+
+
+  public static HashMap<String, String> parseArgs(String[] args) throws FileNotFoundException, IOException {
+
+    HashMap<String, String> h = new HashMap<String, String>();
+
+    if (args.length !=2 || !args[0].equals("-config")) {
+      throw new NumberFormatException();
+    }
+
+    String[] attributes = new String[] { "Listen", "DocumentRoot", "ThreadPoolSize", "CacheSize" };
+
+    BufferedReader br = new BufferedReader(new FileReader(args[1]));
+    while(br.ready()) {
+      String[] toks = br.readLine().split("\\s+");
+      for (String atr : attributes) {
+        if (toks[0].equals(atr))
+          h.put(atr,  toks[1]);
+      }
+    }
+    return h;
+  }
+
+
+
+
 
 }

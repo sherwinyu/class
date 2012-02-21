@@ -34,7 +34,8 @@ public class ThreadPoolCompetingServer extends Server {
 
       while(alive) {
         try {
-          this.wait(100);
+          //this.wait(100);
+          Thread.sleep(100);
         } catch (InterruptedException e) {
           alive = false;
           System.out.println("Interrupted -- shutting down server");
@@ -42,19 +43,35 @@ public class ThreadPoolCompetingServer extends Server {
       }
       // try {
         threadPool.shutdownNow();
-      // } catch (InterruptedException e) {
-        // System.out.println("Error shutting down...");
-      // }
-
     }
 
   public RequestHandler newThreadPoolCompetingRequestHandler() {
     return new ThreadPoolCompetingRequestHandler(this);
   }
-  
-  public static void main (String[] args) {
 
-  }
+  public static void main (String[] args) {
+    try {
+      HashMap<String, String> h = parseArgs(args);
+      int port = Integer.parseInt(h.get("Listen"));
+      String documentRoot = h.get("DocumentRoot");
+      int threadPoolSize = Integer.parseInt(h.get("ThreadPoolSize"));
+      ThreadPoolCompetingServer server = new ThreadPoolCompetingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize);
+      (new Thread(server)).start();
+    }
+    catch (NumberFormatException e) {
+      System.out.println("Usage: java SequentialServer -config <config_file>");
+    }
+    catch (FileNotFoundException e) {
+      System.out.println(e.getMessage());
+    }
+    catch (BindException e) {
+      System.out.println("Port unavailable");
+    }
+    catch (IOException e) {
+      System.out.println("IO Error. " + e.getMessage());
+    }
+  } // end of main
+
 
 }
 

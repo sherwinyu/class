@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import static syu.Utils.*;
+
 public class SequentialServer extends Server {
   static final String NAME = "SequentialServer";
   protected RequestHandler rh;
@@ -30,6 +32,10 @@ public class SequentialServer extends Server {
     return new SequentialServer(new ServerSocket(port), NAME, ".");
   }
 
+  public SequentialServer(int port, String serverName, String documentRoot) throws IOException {
+    this(new ServerSocket(port), serverName, documentRoot);
+  }
+
   public SequentialServer(ServerSocket sock, String serverName, String documentRoot) throws IOException {
     super(sock, serverName, documentRoot);
     counter = 0;
@@ -41,15 +47,15 @@ public class SequentialServer extends Server {
 
 
   @Override
-  public void handleRequests() throws IOException {
+    public void handleRequests() throws IOException {
 
-    Socket connectionSocket;
-    while (alive) {
-      connectionSocket = acceptIncomingConnection(); // blocking
-      rh = getRequestHandler(connectionSocket);
-      rh.handleRequest();
+      Socket connectionSocket;
+      while (alive) {
+        connectionSocket = acceptIncomingConnection(); // blocking
+        rh = getRequestHandler(connectionSocket);
+        rh.handleRequest();
+      }
     }
-  }
 
 
   public RequestHandler getRequestHandler(Socket connectionSocket) {
@@ -61,8 +67,11 @@ public class SequentialServer extends Server {
   public static void main(String args[]) {
 
     try {
-      SequentialServer ss = createFromArgs(args);
-      (new Thread(ss)).start();
+      HashMap<String, String> h = parseArgs(args);
+      int port = Integer.parseInt(h.get("Listen"));
+      String documentRoot = h.get("DocumentRoot");
+      SequentialServer server = new SequentialServer(new ServerSocket(port), NAME, documentRoot);
+      (new Thread(server)).start();
     }
     catch (NumberFormatException e) {
       System.out.println("Usage: java SequentialServer -config <config_file>");
