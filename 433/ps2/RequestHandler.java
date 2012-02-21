@@ -36,7 +36,6 @@ public class RequestHandler implements Runnable {
 
     WebRequest req = new WebRequest();
     if (!req.fromString(requestString)) { // check if there are parse errors
-      System.out.println("\n\n\n\n parse error! \n\n\n");
       resp = WebResponse.badRequestResponse(parentServer.serverName);
     }
     else {

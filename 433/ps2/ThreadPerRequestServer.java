@@ -50,9 +50,10 @@ public class ThreadPerRequestServer extends SequentialServer {
   }
 
   public void startNewThread(RequestHandler rh) {
-      (new Thread(rh)).start();
       numThreadsStarted++;
-      System.out.println(" Number of thread Started: " + numThreadsStarted);
+      rh.id = "" + numThreadsStarted;
+      (new Thread(rh)).start();
+      System.out.println(" Number of thread Started: " + numThreadsStarted);//  + "id: " + rh.id);
   }
 
 
