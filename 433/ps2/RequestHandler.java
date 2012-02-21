@@ -8,40 +8,46 @@ import static syu.Utils.*;
 public class RequestHandler implements Runnable {
 
   protected Socket connectionSocket;
-  public String WWW_ROOT = "./";
-  public String serverName = "someservername";
+  protected Server parentServer;
 
-  public RequestHandler (Socket connectionSocket, String documentRoot, String serverName) {
+  public RequestHandler (Server server, Socket connectionSocket) {
+    this.parentServer = server;
     this.connectionSocket = connectionSocket;
-    this.WWW_ROOT = documentRoot;
-    this.serverName = serverName;
   }
+
+  /*
+     public RequestHandler (Socket connectionSocket, String documentRoot, String serverName) {
+     this.connectionSocket = connectionSocket;
+     this.serverName = serverName;
+     }
+     */
 
   @Override
-  public void run() {
-    try {
-      this.handleRequest();
-    } catch (Exception e) { e.printStackTrace(); }
-  }
+    public void run() {
+      try {
+        this.handleRequest();
+      } catch (Exception e) { e.printStackTrace(); }
+    }
 
   public void handleRequest() throws IOException {
 
-      String requestString = readRequest( connectionSocket.getInputStream() );
-      WebResponse resp;
+    String requestString = readRequest( connectionSocket.getInputStream() );
+    WebResponse resp;
 
-      WebRequest req = new WebRequest();
-      if (!req.fromString(requestString)) { // check if there are parse errors
-        resp = WebResponse.badRequestResponse(serverName);
-      }
-      else {
-        resp = generateResponse(req);
-      }
-      String respString = resp.toString();
-      try {
-        writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
-        connectionSocket.close();
-      }
-      catch (SocketException e) {System.out.println("...Client hung up"); }
+    WebRequest req = new WebRequest();
+    if (!req.fromString(requestString)) { // check if there are parse errors
+      System.out.println("\n\n\n\n parse error! \n\n\n");
+      resp = WebResponse.badRequestResponse(parentServer.serverName);
+    }
+    else {
+      resp = generateResponse(req);
+    }
+    String respString = resp.toString();
+    try {
+      writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
+      connectionSocket.close();
+    }
+    catch (SocketException e) {System.out.println("...Client hung up"); }
   }
 
   protected String readRequest(InputStream in) throws IOException {
@@ -57,27 +63,26 @@ public class RequestHandler implements Runnable {
       sb.append(line + "\r\n");
       line = br.readLine();
     }
-    System.out.println("...request= " + sb.toString());
+    System.out.println("...request = " + inspect(sb.toString()));
     return sb.toString();
   }
 
   protected WebResponse generateResponse(WebRequest req) {
     WebResponse resp = new WebResponse();
     if (req.urlName.equals("load"))
-      return WebResponse.serverOverloadedResponse(serverName);
+      return WebResponse.serverOverloadedResponse(parentServer.serverName);
 
-    File f = new File(WWW_ROOT, req.urlName);
+    File f = new File(parentServer.documentRoot, req.urlName);
     if (!f.exists()) // 2. If doesn't exist -> return 404
-      return WebResponse.fileNotFoundResponse(serverName);
+      return WebResponse.fileNotFoundResponse(parentServer.serverName);
     if (req.ifModifiedSince != null) // 3. If Modified Since -> return 304
       if( f.lastModified() < req.ifModifiedSince.getTime() ) // if server's file is older
-        return WebResponse.notModifiedResponse(serverName);
+        return WebResponse.notModifiedResponse(parentServer.serverName);
     try {
       return respondWithFile(f); // 4. Return file (checks cache automatically)
     } catch (Exception e) {
-      return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
+      return WebResponse.internalServerErrorResponse(parentServer.serverName); // Otherwise, return internal server error
     }
-    // return WebResponse.internalServerErrorResponse(serverName); // Otherwise, return internal server error
   }
 
   /*
@@ -102,11 +107,11 @@ public class RequestHandler implements Runnable {
     byte[] content = new byte[length];
     fileStream.read(content);
 
-    return WebResponse.okResponse(serverName, contentType, length, content);
+    return WebResponse.okResponse(parentServer.serverName, contentType, length, content);
   }
 
   protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
-    // System.out.println("...writing response: " + WebRequest.inspect(responseString));
+    System.out.println("...writing response: " + inspect(responseString));
     out.writeBytes(responseString);
   }
 }

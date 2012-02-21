@@ -4,20 +4,11 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class SequentialServer implements Runnable{
-
-  public int serverPort = 6789;
-  public String serverName = "SequentialServer";
-  ServerSocket listenSocket;
-  public boolean alive = true;
+public class SequentialServer extends Server implements Runnable {
 
   RequestHandler rh;
 
-  //public static String WWW_ROOT = "/home/httpd/html/zoo/classes/cs433/";
-  public String WWW_ROOT = "./";
-
-
-  public static SequentialServer createFromArgs(String[] args) throws Exception {
+  public static SequentialServer createFromArgs(String[] args) throws NumberFormatException, BindException, FileNotFoundException, IOException {
 
     SequentialServer ss = new SequentialServer();
     if (args.length !=2 || !args[0].equals("-config")) {
@@ -34,32 +25,23 @@ public class SequentialServer implements Runnable{
 
     ss.listenSocket = new ServerSocket(ss.serverPort);
     System.out.println("server listening at: " + ss.serverPort);
-    System.out.println("server www root: " + ss.WWW_ROOT);
+    System.out.println("server www root: " + ss.documentRoot);
 
     return ss;
   }
 
-  public void setDocumentRoot(String dirname) throws IOException {
-    if ((new File(dirname)).exists())
-      this.WWW_ROOT = dirname;
-    else
-      throw new FileNotFoundException("Couldn't open document root: " + dirname);
+  public SequentialServer(ServerSocket sock, String serverName, String documentRoot) {
   }
 
-  public void run()
-  {
-    try {
-      this.handleRequests();
-    } catch (Exception e) {e.printStackTrace(); }
+  public SequentialServer() {
   }
-
 
   public void handleRequests() throws IOException {
 
     Socket connectionSocket;
     while (alive) {
       connectionSocket = acceptIncomingConnection(); // blocking
-      rh = getRequestHandler(connectionSocket, WWW_ROOT, serverName);
+      rh = getRequestHandler(connectionSocket);
       rh.handleRequest();
     }
   }
@@ -71,33 +53,28 @@ public class SequentialServer implements Runnable{
     return socket;
   }
 
-  public RequestHandler getRequestHandler(Socket connectionSocket, String documentRoot, String serverName) {
-    return new RequestHandler(connectionSocket, documentRoot, serverName);
+  public RequestHandler getRequestHandler(Socket connectionSocket) {
+    return new RequestHandler(this, connectionSocket);
   }
 
-  public static void main(String args[]) throws Exception  {
+  public static void main(String args[]) {
 
     try {
       SequentialServer ss = createFromArgs(args);
       (new Thread(ss)).start();
     }
-    catch (NumberFormatException e)
-    {
+    catch (NumberFormatException e) {
       System.out.println("Usage: java SequentialServer -config <config_file>");
     }
-    catch (FileNotFoundException e)
-    {
+    catch (FileNotFoundException e) {
       System.out.println(e.getMessage());
     }
-    catch (BindException e)
-    {
+    catch (BindException e) {
       System.out.println("Port unavailable");
     }
-
-
-    // see if we do not use default server port
-
-
+    catch (IOException e) {
+      System.out.println("IO Error. " + e.getMessage());
+    }
   } // end of main
 
 } // end of class SimpleWebServer

@@ -45,7 +45,7 @@ public class WebRequest {
 
       String[] requestLineTokens = lines[0].split("\\s+");
 
-      if (requestLineTokens.length < 3 || !requestLineTokens[0].equals("GET") || !requestLineTokens[2].equals("HTTP/1.0")) {
+      if (requestLineTokens.length < 3 || !requestLineTokens[0].equals("GET") || !requestLineTokens[2].startsWith("HTTP/1.")) {
         return false;
       }
       this.method = requestLineTokens[0];
@@ -63,10 +63,10 @@ public class WebRequest {
         }
       }
     } catch (ArrayIndexOutOfBoundsException e) {
-      System.out.println("Bad request!");
+      System.out.println("\n\n\nArray out of bounds: Bad request!");
       return false;
     } catch (ParseException e) {
-      System.out.println("Bad request!");
+      System.out.println("\n\n\nParseException: Bad request!");
       return false;
     }
 

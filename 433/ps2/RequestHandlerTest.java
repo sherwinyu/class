@@ -22,7 +22,8 @@ public class RequestHandlerTest {
   private WebResponse resp;
   private WebRequest req;
   private Socket mockSocket;
-  // private ServerSocket mockServerSocket;
+  private ServerSocket mockServerSocket;
+  private Server mockServer;
 
   private RequestHandler rh;
 
@@ -36,11 +37,13 @@ public class RequestHandlerTest {
       mockSocket = mock(Socket.class);
 
       // ss = new SequentialServer();
-      rh = new RequestHandler(mockSocket, tmp.getRoot().getPath(), "ServerName");
-      // ss.serverPort = 333;
-      // ss.setDocumentRoot(tmp.getRoot().getPath());
-      // ssSpy = spy(ss);
-      cal=  Calendar.getInstance();
+      mockServer = mock(Server.class, CALLS_REAL_METHODS);
+      mockServer.setDocumentRoot(tmp.getRoot().getPath());
+      mockServer.serverName = "GenericServeName";
+
+      rh = new RequestHandler(mockServer, mockSocket);
+
+      cal =  Calendar.getInstance();
     }
 
   @Test
@@ -93,7 +96,7 @@ public class RequestHandlerTest {
     }
 
   @Test
-    public void respondWithFileJpg() throws IOException {
+    public void testRespondWithFileJpg() throws IOException {
 
       File f = tmp.newFile("testfile.jpg");
       BufferedWriter bw = new BufferedWriter(new FileWriter(f));
@@ -105,15 +108,16 @@ public class RequestHandlerTest {
 
       assertEquals("OK", resp.message);
       assertEquals(200, resp.statusCode);
+      assertEquals(mockServer.serverName, resp.server);
       assertEquals("image/jpeg", resp.contentType);
       assertArrayEquals("jpegfile\n".getBytes(), resp.content);
       System.out.println("actual=" + Arrays.toString(resp.content));
       System.out.println("expected=" + Arrays.toString("jpegfile\n".getBytes()));
-      assertEquals(WebResponse.okResponse(rh.serverName, "image/jpeg", 9, "jpegfile\n".getBytes()).toString(), resp.toString());
+      assertEquals(WebResponse.okResponse(rh.parentServer.serverName, "image/jpeg", 9, "jpegfile\n".getBytes()).toString(), resp.toString());
     }
 
   @Test
-    public void respondWithFileGif() throws IOException {
+    public void testRespondWithFileGif() throws IOException {
 
       File f = tmp.newFile("testfile.gif");
       BufferedWriter bw = new BufferedWriter(new FileWriter(f));
@@ -125,12 +129,13 @@ public class RequestHandlerTest {
 
       assertEquals("OK", resp.message);
       assertEquals(200, resp.statusCode);
+      assertEquals(mockServer.serverName, resp.server);
       assertEquals("image/gif", resp.contentType);
       assertArrayEquals("gifdata\n".getBytes(), resp.content);
     }
 
   @Test
-    public void respondWithFileHtml() throws IOException {
+    public void testRespondWithFileHtml() throws IOException {
 
       File f = tmp.newFile("testfile.html");
       BufferedWriter bw = new BufferedWriter(new FileWriter(f));
@@ -142,13 +147,13 @@ public class RequestHandlerTest {
 
       assertEquals("OK", resp.message);
       assertEquals(200, resp.statusCode);
-      assertEquals("ServerName", resp.server);
+      assertEquals(mockServer.serverName, resp.server);
       assertEquals("text/html", resp.contentType);
       assertArrayEquals("<h1>hello!</h1>\n".getBytes(), resp.content);
     }
 
   @Test
-    public void respondWithFilePlain() throws IOException {
+    public void testRespondWithFilePlain() throws IOException {
 
       File f = tmp.newFile("testfile");
       BufferedWriter bw = new BufferedWriter(new FileWriter(f));
@@ -160,6 +165,7 @@ public class RequestHandlerTest {
 
       assertEquals("OK", resp.message);
       assertEquals(200, resp.statusCode);
+      assertEquals(mockServer.serverName, resp.server);
       assertEquals("text/plain", resp.contentType);
       assertArrayEquals("<h1>hello! this file is plaintext</h1>\n".getBytes(), resp.content);
     }

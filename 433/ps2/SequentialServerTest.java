@@ -66,12 +66,11 @@ public class SequentialServerTest {
       bw.write("herpderp\n");
       bw.close();
 
-
-      RequestHandler rh = new RequestHandler(mockSocket, ssSpy.WWW_ROOT, ssSpy.serverName);
+      RequestHandler rh = new RequestHandler(ssSpy, mockSocket);
       RequestHandler rhSpy = spy(rh);
 
       doReturn(mockSocket).when(ssSpy).acceptIncomingConnection();
-      doReturn(rhSpy).when(ssSpy).getRequestHandler(any(Socket.class), anyString(), anyString());
+      doReturn(rhSpy).when(ssSpy).getRequestHandler(any(Socket.class));
       doReturn(req1.toString()).doReturn(req2.toString()).doReturn(req3.toString()).when(rhSpy).readRequest(any(InputStream.class));
       doNothing().when(rhSpy).writeResponse(anyString(), any(DataOutputStream.class));
 
