@@ -9,12 +9,14 @@ import java.util.concurrent.*;
 import static syu.Utils.*;
 
 public class GetFileTasks implements Runnable {
+  protected String id;
   protected String server;
   protected int port;
   protected String[] filenames;
   protected int fileInd = 0;
   ArrayList<Integer> fileSizes = new ArrayList<Integer>();
   ArrayList<Integer> delays = new ArrayList<Integer>();
+  static int counter = 0;
 
   long startTime;
   long endTime;
@@ -35,25 +37,24 @@ public class GetFileTasks implements Runnable {
         //reportStats(); TODO(syu) implement this
         // System.out.println("File sizes: " + Arrays.toString(this.fileSizes));
         // System.out.println("Delays: " + Arrays.toString(this.delays));
-        System.out.println("File sizes: " + this.fileSizes);
-        System.out.println("Delays: " + this.delays);
+        p(this, "File sizes: " + this.fileSizes);
+        p(this, "Delays: " + this.delays);
 
 
       }
       catch (IOException e) {
         timeup = false;
-        System.out.println("IOError occured. " + e.getMessage());
+        p("IOError occured. " + e.getMessage());
       }
     }
   }
 
   public void setUpConnection() throws IOException {
-    System.out.print("Setting up connection" + addr);
+    p(this, "opening connection: " + addr);
       this.socket = new Socket();
       this.socket.connect(this.addr);
       this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
 
-    System.out.println("...done setting up connection with ..." + this.socket);
   }
 
   public String requestFileMessage(String fn) {
@@ -61,14 +62,13 @@ public class GetFileTasks implements Runnable {
   }
 
   void nextRequest() throws IOException {
-    System.out.println("thread#" + this.hashCode() + ":\tpreparing to get " + filenames[fileInd]);
+    p(this, "Getting filename: " + filenames[fileInd]);
     processFile(filenames[fileInd]);
     fileInd = (fileInd + 1) % filenames.length;
   }
 
   void processFile(String fn) throws IOException {
     String rfm = requestFileMessage(fn);
-    System.out.println("...preparing to write message:" + inspect(rfm));
     writeMessage(rfm);
     long ts = System.currentTimeMillis();
     String resp = receiveResponse();
@@ -76,9 +76,9 @@ public class GetFileTasks implements Runnable {
     long delay = System.currentTimeMillis() - ts;
     int size = resp.getBytes().length;
     collectStats(size, (int) delay);
-    System.out.println("...Received response: " + resp);
-    System.out.println("...Delay " + (int) delay);
-    System.out.println("...size " + size);
+    p(this, "...Received. Delay: " + (int) delay + "\t Size: " + size +"\t Response: " + resp);
+    // p(this, "...Delay " + (int) delay);
+    // p(this, "...size " + size);
   }
 
   void collectStats(int size, int delay)
@@ -92,13 +92,12 @@ public class GetFileTasks implements Runnable {
   }
 
   String receiveResponse() throws IOException {
-
-    p("...receiving Response");
     return new Scanner(socket.getInputStream()).useDelimiter("\\A").next();
   }
 
   // time out is in seconds
   public GetFileTasks(InetSocketAddress addr, String[] filenames, int timeout) throws IOException {
+    this.id = "GFT#" + GetFileTasks.counter++;
     this.addr = addr;
     this.filenames = filenames;
     this.dataOutputStream = null; 

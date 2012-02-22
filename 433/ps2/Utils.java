@@ -70,6 +70,15 @@ public class Utils
     p(indent(depth) + rh.id + ":\t" +inspect(s));
   }
 
+  public static void p(GetFileTasks o, String s) {
+    p(o, 2, s);
+  }
+
+  public static void p(GetFileTasks o, int depth, String s) {
+    System.out.println(indent(depth) + o.id + ":\t" +inspect(s));
+  }
+
+
   private static  String indent(int n) {
     String s = "";
     for(int i = 0; i < n; i++)

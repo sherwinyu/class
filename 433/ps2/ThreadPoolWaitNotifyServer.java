@@ -8,21 +8,21 @@ import java.util.concurrent.*;
 
 import static syu.Utils.*;
 
-public class ThreadPoolPollingServer extends ThreadPoolServer {
+public class ThreadPoolWaitNotifyServer extends ThreadPoolServer {
 
   protected int count = 0;
-  public static final String NAME = "ThreadPoolPollingServer";
+  public static final String NAME = "ThreadPoolWaitNotifyServer";
   protected List<Socket> socketQueue;
 
-  public ThreadPoolPollingServer() throws IOException {
+  public ThreadPoolWaitNotifyServer() throws IOException {
     this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS);
   }
 
-  public ThreadPoolPollingServer(int numThreads) throws IOException {
+  public ThreadPoolWaitNotifyServer(int numThreads) throws IOException {
     this(new ServerSocket(), NAME, ".", numThreads);
   }
 
-  public ThreadPoolPollingServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
+  public ThreadPoolWaitNotifyServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
     super(s, serverName, documentRoot, numThreads);
     this.threadPool = Executors.newFixedThreadPool(this.numThreads);
     socketQueue = new ArrayList<Socket>();
@@ -32,22 +32,25 @@ public class ThreadPoolPollingServer extends ThreadPoolServer {
     public void handleRequests() throws IOException {
 
       for (int i = 0; i < numThreads; i++ )
-        threadPool.execute(newThreadPoolPollingRequestHandler());
+        threadPool.execute(newThreadPoolWaitNotifyRequestHandler());
       Socket incomingSocket;
+
       while (alive) {
         incomingSocket = acceptIncomingConnection();
         synchronized(socketQueue) {
           socketQueue.add(incomingSocket);
+          socketQueue.notifyAll();
         }
       }
       threadPool.shutdownNow();
 
     }
 
-  public ThreadPoolPollingRequestHandler newThreadPoolPollingRequestHandler() {
-    ThreadPoolPollingRequestHandler tpprh =  new ThreadPoolPollingRequestHandler(this);
-    tpprh.id = count++ + "";
-    return tpprh;
+
+  public ThreadPoolWaitNotifyRequestHandler newThreadPoolWaitNotifyRequestHandler() {
+    ThreadPoolWaitNotifyRequestHandler tpwnrh =  new ThreadPoolWaitNotifyRequestHandler(this);
+    tpwnrh.id = "Thread#"+count++;
+    return tpwnrh;
   }
 
 
@@ -76,35 +79,39 @@ public class ThreadPoolPollingServer extends ThreadPoolServer {
 
 }
 
-class ThreadPoolPollingRequestHandler extends RequestHandler {
+class ThreadPoolWaitNotifyRequestHandler extends RequestHandler {
 
-  public ThreadPoolPollingRequestHandler(Server s) {
+  public ThreadPoolWaitNotifyRequestHandler(Server s) {
     this.parentServer = s;
     this.connectionSocket = null;
   }
 
   public List<Socket> getSocketQueue() {
-    return ((ThreadPoolPollingServer) this.parentServer).socketQueue;
+    return ((ThreadPoolWaitNotifyServer) this.parentServer).socketQueue;
   }
 
   @Override
     public void run() {
 
-      while (connectionSocket == null) {
+      while (true) {
         synchronized(getSocketQueue()) {
-          if (!getSocketQueue().isEmpty()) {
-            connectionSocket = getSocketQueue().remove(0);
-            
-          } // end synchronized
-          if (connectionSocket != null )
+          while (getSocketQueue().isEmpty()) { // in CS
+            p(this, "waiting");
             try {
-              handleRequest();
-            } catch (IOException e) {
-              p(this,"ThreadPoolPollingRequestHandler id = " + id + ": encounterd error in handling request:\n");
+              getSocketQueue().wait(); // relinquish lock and wait
+            } catch (InterruptedException e) {
+              p(this, "waiting interrupted");
             }
-          connectionSocket = null;
+          }
+          // condition: socketQueue is non empty and we are in CS
+          connectionSocket = getSocketQueue().remove(0);
+          p(this, "acquired connection: " + connectionSocket);
+        } // have the socket, no longer need to be in CS
+        try {
+          handleRequest();
+        } catch (IOException e) {
+          p(this,"encounterd error in handling request\n");
         }
       }
     }
-
 }

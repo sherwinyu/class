@@ -21,9 +21,6 @@ public class WebRequestTest {
 
   private ServerSocket mockServerSocket;
   private Socket mockSocket;
-  // private SequentialServer ss;
-  // private SequentialServer ssSpy;
-
   private WebRequest req;
 
   @Before
@@ -32,10 +29,6 @@ public class WebRequestTest {
 
       mockServerSocket = mock(ServerSocket.class);
       mockSocket = mock(Socket.class);
-
-      // ss = new SequentialServer();
-      // ssSpy = spy(ss);
-// 
     }
 
   @Test
