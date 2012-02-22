@@ -7,7 +7,7 @@ import java.util.*;
 
 import static syu.Utils.*;
 
-public class SequentialServer extends Server {
+public class SequentialServer extends SynchronousServer {
   static final String NAME = "SequentialServer";
   protected RequestHandler rh;
   protected int counter = 0;

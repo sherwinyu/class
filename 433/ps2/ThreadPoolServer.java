@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 
 import static syu.Utils.*;
 
-public abstract class ThreadPoolServer extends Server {
+public abstract class ThreadPoolServer extends SynchronousServer {
   public static final int NUM_DEFAULT_THREADS = 15;
   protected int numThreads;
   protected ExecutorService threadPool;
@@ -20,5 +20,6 @@ public abstract class ThreadPoolServer extends Server {
   public ThreadPoolServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
     super(s, serverName, documentRoot);
     this.numThreads = numThreads;
+    p(this, 1, "with " + numThreads + "threads");
   }
 }

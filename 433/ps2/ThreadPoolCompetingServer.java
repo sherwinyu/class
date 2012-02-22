@@ -78,15 +78,19 @@ class ThreadPoolCompetingRequestHandler extends RequestHandler {
     this.connectionSocket = null;
   }
 
+  public ThreadPoolCompetingServer getParentServer()   {
+    return (ThreadPoolCompetingServer) this.parentServer;
+  }
+
   @Override
     public void run() {
       connectionSocket = null;
       alive = true;
       while(alive) {
         try {
-          synchronized(parentServer.listenSocket) {
+          synchronized(getParentServer().listenSocket) {
             try {
-              connectionSocket = parentServer.acceptIncomingConnection();
+              connectionSocket = getParentServer().acceptIncomingConnection();
             } catch (IOException e) {
               p(this,"IOException in " + this.id);
             }
