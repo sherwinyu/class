@@ -20,7 +20,7 @@
    */
 
 
-// package com.sherwinyu.cs433.ps2;
+package syu;
 
 import java.io.*;
 import java.net.*;

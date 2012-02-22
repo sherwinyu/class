@@ -1,5 +1,7 @@
 // package com.sherwinyu.cs433.ps2;
 
+package syu;
+
 import org.junit.Test;
 import org.junit.*;
 import java.net.*;

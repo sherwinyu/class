@@ -1,6 +1,9 @@
 package syu;
+
 import java.io.*;
 import java.util.*;
+// import static Server.*;
+// import static RequestHandler.*;
 
 public class Utils
 {
@@ -11,9 +14,9 @@ public class Utils
 
     for (int i = 0; i < in.length(); i++) {
       if (in.charAt(i) == '\n')
-        s += "NEWLINE";
+        s += "\\n";
       else if (in.charAt(i) == '\r')
-        s += "CARRIAGE";
+        s += "\\r";
       else
         s += ("" + in.charAt(i));
     }
@@ -24,7 +27,7 @@ public class Utils
     System.out.println(in);
   }
 
-  public static void pr(String in) {
+  public static void pp(String in) {
     System.out.println(in);
   }
 
@@ -50,8 +53,27 @@ public class Utils
     return h;
   }
 
+  public static void p(Server server, String s) {
+    p(server, 2, s);
+  }
+
+  public static void p(Server server, int depth, String s) {
+    System.out.println(indent(depth) + server.serverName + ":\t" +inspect(s));
+  }
 
 
+  public static void p(RequestHandler rh, String s) {
+    p(rh, 2, s);
+  }
 
+  public static void p(RequestHandler rh, int depth, String s) {
+    p(indent(depth) + rh.id + ":\t" +inspect(s));
+  }
 
+  private static  String indent(int n) {
+    String s = "";
+    for(int i = 0; i < n; i++)
+      s += "..";
+    return s;
+  }
 }

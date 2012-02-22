@@ -1,4 +1,5 @@
 // package com.sherwinyu.cs433.ps2;
+package syu;
 
 import java.io.*;
 import java.net.*;
@@ -10,27 +11,6 @@ public class SequentialServer extends Server {
   static final String NAME = "SequentialServer";
   protected RequestHandler rh;
   protected int counter = 0;
-
-  public static SequentialServer createFromArgs(String[] args) throws NumberFormatException, BindException, FileNotFoundException, IOException {
-
-    // SequentialServer ss = new SequentialServer();
-    int port = -1;
-    String docroot = "";
-
-    if (args.length !=2 || !args[0].equals("-config")) {
-      throw new NumberFormatException();
-    }
-    BufferedReader br = new BufferedReader(new FileReader(args[1]));
-    while(br.ready()) {
-      String[] toks = br.readLine().split("\\s+");
-      if (toks[0].equals("Listen"))
-        port  = Integer.parseInt(toks[1]);
-      if (toks[0].equals("DocumentRoot"))
-        docroot = toks[1];
-    }
-
-    return new SequentialServer(new ServerSocket(port), NAME, ".");
-  }
 
   public SequentialServer(int port, String serverName, String documentRoot) throws IOException {
     this(new ServerSocket(port), serverName, documentRoot);
@@ -56,7 +36,6 @@ public class SequentialServer extends Server {
         rh.handleRequest();
       }
     }
-
 
   public RequestHandler getRequestHandler(Socket connectionSocket) {
     RequestHandler temp = new RequestHandler(this, connectionSocket);

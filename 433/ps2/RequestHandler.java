@@ -1,3 +1,4 @@
+package syu;
 
 import java.io.*;
 import java.net.*;
@@ -15,6 +16,7 @@ public class RequestHandler implements Runnable {
     this.parentServer = server;
     this.connectionSocket = connectionSocket;
   }
+
   public RequestHandler() {
     parentServer = null;
     connectionSocket = null;
@@ -36,6 +38,7 @@ public class RequestHandler implements Runnable {
 
   public void handleRequest() throws IOException {
     String requestString = readRequest( connectionSocket.getInputStream() );
+    p(this,"Read FRM: " + connectionSocket.toString() + " \t request: " + requestString);
     WebResponse resp;
 
     WebRequest req = new WebRequest();
@@ -48,9 +51,10 @@ public class RequestHandler implements Runnable {
     String respString = resp.toString();
     try {
       writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
+      p(this,"Write TO: " + this.connectionSocket.toString() + "\t response:" +  respString);
       connectionSocket.close();
     }
-    catch (SocketException e) {System.out.println("...Client hung up"); }
+    catch (SocketException e) {p(this, "client (" + connectionSocket + ") hung up"); }
   }
 
   protected String readRequest(InputStream in) throws IOException {
@@ -58,15 +62,12 @@ public class RequestHandler implements Runnable {
     StringBuffer sb = new StringBuffer();
 
     String line = br.readLine();
-    System.out.println(line);
 
     while(line != null && !line.equals(""))
     {
-      System.out.println(line);
       sb.append(line + "\r\n");
       line = br.readLine();
     }
-    System.out.println("...request = " + inspect(sb.toString()));
     return sb.toString();
   }
 
@@ -114,7 +115,6 @@ public class RequestHandler implements Runnable {
   }
 
   protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
-    System.out.println("...writing response: " + inspect(responseString));
     out.writeBytes(responseString);
   }
 }

@@ -1,3 +1,4 @@
+package syu;
 
 import java.io.*;
 import java.net.*;
@@ -6,25 +7,20 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import static syu.Utils.*;
-public class ThreadPoolCompetingServer extends Server {
+public class ThreadPoolCompetingServer extends ThreadPoolServer {
 
   public static final String NAME = "ThreadPoolCompetingServer";
-  public static final int NUM_DEFAULT_THREADS = 15;
-  protected int numThreads;
-  protected ExecutorService threadPool;
 
   public ThreadPoolCompetingServer() throws IOException {
-    this(new ServerSocket(), NAME, ".", NUM_DEFAULT_THREADS);
+    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS);
   }
 
   public ThreadPoolCompetingServer(int numThreads) throws IOException {
     this(new ServerSocket(), NAME, ".", numThreads);
   }
 
-
   public ThreadPoolCompetingServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
-    super(s, serverName, documentRoot);
-    this.numThreads = numThreads;
+    super(s, serverName, documentRoot, numThreads);
     this.threadPool = Executors.newFixedThreadPool(this.numThreads);
   }
 
@@ -36,18 +32,16 @@ public class ThreadPoolCompetingServer extends Server {
 
       while(alive) {
         try {
-          //this.wait(100);
           Thread.sleep(100);
         } catch (InterruptedException e) {
           alive = false;
-          System.out.println("Interrupted -- shutting down server");
+          p(this,"Interrupted -- shutting down server");
         }
       }
-      // try {
         threadPool.shutdownNow();
     }
 
-  public ThreadPoolCompetingRequestHandler  newThreadPoolCompetingRequestHandler() {
+  public ThreadPoolCompetingRequestHandler newThreadPoolCompetingRequestHandler() {
     return new ThreadPoolCompetingRequestHandler(this);
   }
 
@@ -61,7 +55,7 @@ public class ThreadPoolCompetingServer extends Server {
       (new Thread(server)).start();
     }
     catch (NumberFormatException e) {
-      System.out.println("Usage: java SequentialServer -config <config_file>");
+      System.out.println("Usage: java " + NAME + " -config <config_file>");
     }
     catch (FileNotFoundException e) {
       System.out.println(e.getMessage());
@@ -73,7 +67,6 @@ public class ThreadPoolCompetingServer extends Server {
       System.out.println("IO Error. " + e.getMessage());
     }
   } // end of main
-
 }
 
 class ThreadPoolCompetingRequestHandler extends RequestHandler {
@@ -85,7 +78,6 @@ class ThreadPoolCompetingRequestHandler extends RequestHandler {
     this.connectionSocket = null;
   }
 
-
   @Override
     public void run() {
       connectionSocket = null;
@@ -96,14 +88,14 @@ class ThreadPoolCompetingRequestHandler extends RequestHandler {
             try {
               connectionSocket = parentServer.acceptIncomingConnection();
             } catch (IOException e) {
-              System.out.println("IOException in " + this.id);
+              p(this,"IOException in " + this.id);
             }
           }
           handleRequest();
         }
         catch (IOException e) {
           this.alive = false;
-          System.out.println("ThreadPoolCompetingRequestHandler id = " + id + ": shutting down due to IO error:\n");
+          p(this,"ThreadPoolCompetingRequestHandler id = " + id + ": shutting down due to IO error:\n");
           e.printStackTrace();
         }
       } // end while

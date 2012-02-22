@@ -1,4 +1,4 @@
-// package com.sherwinyu.cs433.ps2;
+package syu;
 
 import java.io.*;
 import java.net.*;
@@ -35,7 +35,7 @@ public class ThreadPerRequestServer extends SequentialServer {
       numThreadsStarted++;
       rh.id = "" + numThreadsStarted;
       (new Thread(rh)).start();
-      System.out.println(" Number of thread Started: " + numThreadsStarted);//  + "id: " + rh.id);
+      p(this," Number of thread Started: " + numThreadsStarted);//  + "id: " + rh.id);
   }
 
 

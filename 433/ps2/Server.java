@@ -1,6 +1,9 @@
+package syu;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import static syu.Utils.*;
 
 public abstract class Server implements Runnable {
 
@@ -20,9 +23,9 @@ public abstract class Server implements Runnable {
   public abstract void handleRequests() throws IOException;
 
   public Socket acceptIncomingConnection() throws IOException {
-    System.out.println("\nAccepting new connection...");
+    p(this, 1 ,"Accepting new connection...");
     Socket socket =  listenSocket.accept();
-    System.out.println("...Accepted from" +socket.getLocalAddress() + ":" +socket.getPort() );
+    p(this, "Accepted from" +socket.getLocalAddress() + ":" +socket.getPort() );
     return socket;
   }
 
@@ -40,8 +43,8 @@ public abstract class Server implements Runnable {
     this.serverName = serverName;
     this.setDocumentRoot(documentRoot);
 
-    System.out.println("server listening at: " + listenSocket);
-    System.out.println("server www root: " + documentRoot);
+    p(this, 1,  "server listening at: " + listenSocket);
+    p(this, 1, "server www root: " + documentRoot);
   }
 
   public Server () throws IOException {

@@ -1,4 +1,5 @@
 // package com.sherwinyu.cs433.ps2;
+package syu;
 
 import org.junit.Test;
 import org.junit.*;
@@ -20,8 +21,8 @@ public class WebRequestTest {
 
   private ServerSocket mockServerSocket;
   private Socket mockSocket;
-  private SequentialServer ss;
-  private SequentialServer ssSpy;
+  // private SequentialServer ss;
+  // private SequentialServer ssSpy;
 
   private WebRequest req;
 
@@ -32,9 +33,9 @@ public class WebRequestTest {
       mockServerSocket = mock(ServerSocket.class);
       mockSocket = mock(Socket.class);
 
-      ss = new SequentialServer();
-      ssSpy = spy(ss);
-
+      // ss = new SequentialServer();
+      // ssSpy = spy(ss);
+// 
     }
 
   @Test
@@ -103,7 +104,7 @@ public class WebRequestTest {
     }
 
   public static junit.framework.Test suite() {
-    return new junit.framework.JUnit4TestAdapter(WebRequestTest.class);
+    return new junit.framework.JUnit4TestAdapter(syu.WebRequestTest.class);
   }
 
   public static void main(String[] args) throws Exception {

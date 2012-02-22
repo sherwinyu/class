@@ -1,4 +1,5 @@
 // package com.sherwinyu.cs433.ps2;
+package syu;
 
 import java.util.*;
 import java.text.SimpleDateFormat;

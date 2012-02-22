@@ -1,4 +1,5 @@
 // package com.sherwinyu.cs433.ps2;
+package syu;
 
 import java.util.*;
 
@@ -100,7 +101,6 @@ CRLF
     }
     sb.append("\r\n");
     if (content != null) {
-      System.out.println("\t\tcontent=" + Arrays.toString(this.content));
       sb.append(new String(this.content));
     }
     return sb.toString();
