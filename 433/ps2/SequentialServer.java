@@ -9,7 +9,7 @@ import static syu.Utils.*;
 
 public class SequentialServer extends SynchronousServer {
   static final String NAME = "SequentialServer";
-  protected RequestHandler rh;
+  protected SyncRequestHandler rh;
   protected int counter = 0;
 
   public SequentialServer(int port, String serverName, String documentRoot) throws IOException {
@@ -37,8 +37,8 @@ public class SequentialServer extends SynchronousServer {
       }
     }
 
-  public RequestHandler getRequestHandler(Socket connectionSocket) {
-    RequestHandler temp = new RequestHandler(this, connectionSocket);
+  public SyncRequestHandler getRequestHandler(Socket connectionSocket) {
+    SyncRequestHandler temp = new SyncRequestHandler(this, connectionSocket);
     temp.id = "" + counter++;
     return temp;
   }

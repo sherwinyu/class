@@ -17,7 +17,7 @@ import org.mockito.verification.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-public class RequestHandlerTest {
+public class SyncRequestHandlerTest {
 
   private Calendar cal;
   private WebResponse resp;
@@ -26,7 +26,7 @@ public class RequestHandlerTest {
   private ServerSocket mockServerSocket;
   private Server mockServer;
 
-  private RequestHandler rh;
+  private SyncRequestHandler rh;
 
   @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
@@ -42,7 +42,7 @@ public class RequestHandlerTest {
       mockServer.setDocumentRoot(tmp.getRoot().getPath());
       mockServer.serverName = "GenericServeName";
 
-      rh = new RequestHandler(mockServer, mockSocket);
+      rh = new SyncRequestHandler(mockServer, mockSocket);
 
       cal =  Calendar.getInstance();
     }
@@ -172,7 +172,7 @@ public class RequestHandlerTest {
     }
 
   public static junit.framework.Test suite() {
-    return new junit.framework.JUnit4TestAdapter(RequestHandlerTest.class);
+    return new junit.framework.JUnit4TestAdapter(SyncRequestHandlerTest.class);
   }
 
   }

@@ -26,12 +26,12 @@ public class ThreadPerRequestServer extends SequentialServer {
     Socket connectionSocket;
     while (alive) {
       connectionSocket = acceptIncomingConnection(); // blocking
-      RequestHandler rh = getRequestHandler(connectionSocket);
+      SyncRequestHandler rh = getRequestHandler(connectionSocket);
       startNewThread(rh);
     }
   }
 
-  public void startNewThread(RequestHandler rh) {
+  public void startNewThread(SyncRequestHandler rh) {
       numThreadsStarted++;
       rh.id = "" + numThreadsStarted;
       (new Thread(rh)).start();

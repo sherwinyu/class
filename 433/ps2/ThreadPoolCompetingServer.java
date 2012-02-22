@@ -69,7 +69,7 @@ public class ThreadPoolCompetingServer extends ThreadPoolServer {
   } // end of main
 }
 
-class ThreadPoolCompetingRequestHandler extends RequestHandler {
+class ThreadPoolCompetingRequestHandler extends SyncRequestHandler {
 
   private boolean alive;
 

@@ -9,25 +9,39 @@ import java.util.concurrent.*;
 
 import static syu.Utils.*;
 
-public class AsyncServer implements Runnable {
+public class AsyncServer extends Server {
   public static final String NAME = "AsyncServer";
+  
   public static ServerSocketChannel serverChannel;
 
   protected Dispatcher dispatcher;
 
-  public AsyncServer(int port, String serverName, String documentRoot) //TODO(syu) -- what goes here?
+  public AsyncServer(int port, String serverName, String documentRoot) throws IOException //TODO(syu) -- what goes here?
   {
-    dispatcher = new Dispatcher();
-
-
+    super(serverName, documentRoot);
+    this.serverChannel = openServerChannelAtPort(port);
+    this.serverChannel.configureBlocking(false);
+    this.dispatcher = new Dispatcher(this.serverChannel);
   }
 
-  public void run() {
-    handleRequests();
+  public ServerSocketChannel openServerChannelAtPort(int port) throws IOException {
+    ServerSocketChannel ssc = ServerSocketChannel.open();
+    ServerSocket ss = ssc.socket();
+    ss.bind(new InetSocketAddress(port));
+    p(this, "Server starting: " + ss);
+    return ssc;
   }
+
+  // ServerSocketChannel 
+
 
   public void handleRequests() {
+    // 1. register the accept handler
+    // 2. start the thread
+    // 3. start the monitoring thread
+
     new Thread(dispatcher).start();
+    //TODO(syu) monitoring thread? 
   }
 
   public static void main(String[] args) {

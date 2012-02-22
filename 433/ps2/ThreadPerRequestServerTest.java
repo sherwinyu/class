@@ -52,8 +52,8 @@ public class ThreadPerRequestServerTest {
   @Test
     public void testStartNewThreadCalls() throws IOException, InterruptedException {
 
-      RequestHandler rh = new RequestHandler(serverSpy, mockSocket);
-      RequestHandler rhSpy = spy(rh);
+      SyncRequestHandler rh = new SyncRequestHandler(serverSpy, mockSocket);
+      SyncRequestHandler rhSpy = spy(rh);
 
       doReturn(mockSocket).when(serverSpy).acceptIncomingConnection();
       doReturn("someString").when(rhSpy).readRequest(any(InputStream.class));
@@ -84,14 +84,14 @@ public class ThreadPerRequestServerTest {
       bw.write("herpderp\n");
       bw.close();
 
-      RequestHandler rh1 = new RequestHandler(serverSpy, mockSocket);
-      RequestHandler rh1Spy = spy(rh1);
+      SyncRequestHandler rh1 = new SyncRequestHandler(serverSpy, mockSocket);
+      SyncRequestHandler rh1Spy = spy(rh1);
 
-      RequestHandler rh2 = new RequestHandler(serverSpy, mockSocket);
-      RequestHandler rh2Spy = spy(rh2);
+      SyncRequestHandler rh2 = new SyncRequestHandler(serverSpy, mockSocket);
+      SyncRequestHandler rh2Spy = spy(rh2);
 
-      RequestHandler rh3 = new RequestHandler(serverSpy, mockSocket);
-      RequestHandler rh3Spy = spy(rh3);
+      SyncRequestHandler rh3 = new SyncRequestHandler(serverSpy, mockSocket);
+      SyncRequestHandler rh3Spy = spy(rh3);
 
       doReturn(mockSocket).doReturn(mockSocket).doReturn(mockSocket).doAnswer(
         new Answer() {

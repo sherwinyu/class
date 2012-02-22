@@ -79,7 +79,7 @@ public class ThreadPoolWaitNotifyServer extends ThreadPoolServer {
 
 }
 
-class ThreadPoolWaitNotifyRequestHandler extends RequestHandler {
+class ThreadPoolWaitNotifyRequestHandler extends SyncRequestHandler {
 
   public ThreadPoolWaitNotifyRequestHandler(Server s) {
     this.parentServer = s;

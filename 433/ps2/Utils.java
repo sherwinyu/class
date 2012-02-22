@@ -61,15 +61,6 @@ public class Utils
     System.out.println(indent(depth) + server.serverName + ":\t" +inspect(s));
   }
 
-
-  public static void p(RequestHandler rh, String s) {
-    p(rh, 2, s);
-  }
-
-  public static void p(RequestHandler rh, int depth, String s) {
-    p(indent(depth) + rh.id + ":\t" +inspect(s));
-  }
-
   public static void p(GetFileTasks o, String s) {
     p(o, 2, s);
   }
@@ -78,7 +69,35 @@ public class Utils
     System.out.println(indent(depth) + o.id + ":\t" +inspect(s));
   }
 
+  public static void p(Debuggable o, String s) {
+    p(o, 2, s);
+  }
 
+  public static void p(Debuggable o, int depth, String s) {
+    System.out.println(indent(depth) + o.id() + ":\t" +inspect(s));
+  }
+
+/*
+  public static void p(RequestHandler rh, String s) {
+    p(rh, 2, s);
+  }
+
+  public static void p(RequestHandler rh, int depth, String s) {
+    p(indent(depth) + rh.id + ":\t" +inspect(s));
+  }
+
+
+  public static void p(Dispatcher o, String s) {
+    p(o, 2, s);
+  }
+
+  public static void p(Dispatcher o, int depth, String s) {
+    System.out.println(indent(depth) + o.id + ":\t" +inspect(s));
+  }
+
+
+
+  */
   private static  String indent(int n) {
     String s = "";
     for(int i = 0; i < n; i++)
@@ -86,3 +105,9 @@ public class Utils
     return s;
   }
 }
+
+interface Debuggable {
+  public String id();
+}
+
+

@@ -67,8 +67,8 @@ public class SequentialServerTest {
       bw.write("herpderp\n");
       bw.close();
 
-      RequestHandler rh = new RequestHandler(ssSpy, mockSocket);
-      RequestHandler rhSpy = spy(rh);
+      SyncRequestHandler rh = new SyncRequestHandler(ssSpy, mockSocket);
+      SyncRequestHandler rhSpy = spy(rh);
       rhSpy.id = "test id";
 
       doReturn(mockSocket).when(ssSpy).acceptIncomingConnection();

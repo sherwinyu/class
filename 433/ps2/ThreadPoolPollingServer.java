@@ -76,7 +76,7 @@ public class ThreadPoolPollingServer extends ThreadPoolServer {
 
 }
 
-class ThreadPoolPollingRequestHandler extends RequestHandler {
+class ThreadPoolPollingRequestHandler extends SyncRequestHandler {
 
   public ThreadPoolPollingRequestHandler(Server s) {
     this.parentServer = s;
