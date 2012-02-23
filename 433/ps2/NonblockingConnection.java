@@ -34,7 +34,9 @@ public class NonblockingConnection implements Debuggable {
     this.handler = null;
     this.dispatcher = d;
     this.inbuffer = ByteBuffer.allocate(4096);
+    this.inbuffer.mark();
     this.outbuffer = ByteBuffer.allocate(4096);
+    this.outbuffer.mark();
     this.state = ConnectionState.ACCEPTED;
     p(this, 4, "new connection created.");
   }
@@ -42,6 +44,22 @@ public class NonblockingConnection implements Debuggable {
   public void setHandler(IAsyncHandler h) {
     this.handler = h;
   }
+
+  public void cleanup() {
+    p(this, 4, "cleaning up");
+    try {
+    clientChannel.close();
+    } catch (IOException e) {
+      p(this, 4, "error when cleaning up");
+      e.printStackTrace();
+    }
+     
+    clientChannel= null;
+    inbuffer = null;
+    outbuffer = null;
+    dispatcher = null;
+    setHandler(null);
+  }
 }
 
-enum ConnectionState {NONE, ACCEPTED, READING, PROCESSING, WRITING, CLOSED };
+enum ConnectionState {NONE, ACCEPTED, READING, PROCESSING, WRITING, WRITTEN, CLOSED };

@@ -14,6 +14,19 @@ public class RequestHandler implements Debuggable {
     return id;
   }
 
+  public String getResponseString(String requestString) {
+
+    WebResponse resp;
+    WebRequest req = new WebRequest();
+    if (!req.fromString(requestString)) { // check if there are parse errors
+      resp = WebResponse.badRequestResponse(parentServer.serverName);
+    }
+    else {
+      resp = generateResponse(req);
+    }
+    return resp.toString();
+  }
+
   protected WebResponse generateResponse(WebRequest req) {
     WebResponse resp = new WebResponse();
     if (req.urlName.equals("load"))
@@ -57,7 +70,4 @@ public class RequestHandler implements Debuggable {
     return WebResponse.okResponse(parentServer.serverName, contentType, length, content);
   }
 
-  protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
-    out.writeBytes(responseString);
-  }
 }

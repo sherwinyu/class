@@ -34,19 +34,13 @@ public class SyncRequestHandler extends RequestHandler implements Runnable {
       } catch (Exception e) { e.printStackTrace(); }
     }
 
+
   public void handleRequest() throws IOException {
     String requestString = readRequest( connectionSocket.getInputStream() );
     p(this,"Read FRM: " + connectionSocket.toString() + " \t request: " + requestString);
-    WebResponse resp;
+    String respString = getResponseString(requestString);
 
-    WebRequest req = new WebRequest();
-    if (!req.fromString(requestString)) { // check if there are parse errors
-      resp = WebResponse.badRequestResponse(parentServer.serverName);
-    }
-    else {
-      resp = generateResponse(req);
-    }
-    String respString = resp.toString();
+    // String respString = resp.toString();
     try {
       writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
       p(this,"Write TO: " + this.connectionSocket.toString() + "\t response:" +  respString);
@@ -67,6 +61,10 @@ public class SyncRequestHandler extends RequestHandler implements Runnable {
       line = br.readLine();
     }
     return sb.toString();
+  }
+
+  protected void writeResponse(String responseString, DataOutputStream out) throws IOException {
+    out.writeBytes(responseString);
   }
 
 }

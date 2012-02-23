@@ -21,7 +21,7 @@ public class AsyncServer extends Server {
     super(serverName, documentRoot);
     this.serverChannel = openServerChannelAtPort(port);
     this.serverChannel.configureBlocking(false);
-    this.dispatcher = new Dispatcher(this.serverChannel);
+    this.dispatcher = new Dispatcher(this, this.serverChannel);
   }
 
   public ServerSocketChannel openServerChannelAtPort(int port) throws IOException {
@@ -50,7 +50,8 @@ public class AsyncServer extends Server {
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
       AsyncServer server = new AsyncServer(port, NAME, documentRoot) ;
-      (new Thread(server)).start();
+      // (new Thread(server)).start();
+      server.handleRequests();
     }
     catch (NumberFormatException e) {
       System.out.println("Usage: java " + NAME + " -config <config_file>");

@@ -13,15 +13,16 @@ public class AsyncRequestHandler extends RequestHandler implements IReadHandler,
   private NonblockingConnection nc;
   private SocketChannel clientChannel;
   ByteBuffer inbuffer;
+  ByteBuffer outbuffer;
 
 
   public void setState(ConnectionState state) {
     getConnection().state = state;
   }
   
-  public void unregisterOp(int op) {
-    //TODO
-        //getConnection().unregister(SelectionKey.OP_READ);
+  public void setOps(int ops) {
+
+    getConnection().key.interestOps(ops); //unregister(SelectionKey.OP_READ);
   }
 
   public NonblockingConnection getConnection() {
@@ -31,8 +32,10 @@ public class AsyncRequestHandler extends RequestHandler implements IReadHandler,
   public AsyncRequestHandler(NonblockingConnection nc) {
     this.nc = nc;
     this.clientChannel = getConnection().clientChannel;
+    this.parentServer = getConnection().dispatcher.server;
     this.id = "ARHport#" + port(this.clientChannel);
     this.inbuffer = getConnection().inbuffer;
+    this.outbuffer = getConnection().outbuffer;
     p(this, 4, "created");
   }
   /* 
@@ -47,12 +50,17 @@ public class AsyncRequestHandler extends RequestHandler implements IReadHandler,
    * else, return 
    * 
    */
+String readSoFar = "";
   @Override
-    public void onRead() throws IOException {
+    public void onRead(SelectionKey sk) throws IOException {
       setState(ConnectionState.READING);
-
-      if (clientChannel.read(inbuffer) == -1) {
-        unregisterOp(SelectionKey.OP_READ);
+      p(this, 4, "reading");
+    clientChannel.read(inbuffer);
+    readSoFar = new String(inbuffer.array(), 0, inbuffer.position() + 1);
+    p(this, 4, "read so far:" + readSoFar);
+      if (readSoFar.indexOf("\r\n\r\n") != -1) {
+        setOps(getConnection().key.interestOps() & ~ SelectionKey.OP_READ);
+        // unregisterOp(SelectionKey.OP_READ);
         setState(ConnectionState.PROCESSING);
         processRequest();
       }
@@ -67,12 +75,25 @@ public class AsyncRequestHandler extends RequestHandler implements IReadHandler,
    */
 
   public void processRequest() {
-    //TODO(syu)
+    // WebRequest req.fromString(
+
+    p(this, 4, "processing request");
+    String responseString = getResponseString(readSoFar);
+    p(this, 4, "response = " + responseString);
+    setState(ConnectionState.WRITING);
+    setOps(getConnection().key.interestOps() | SelectionKey.OP_WRITE);
+    outbuffer.put(responseString.getBytes());
+    outbuffer.flip();
   }
 
   @Override
-    public void onWrite() throws IOException {
-
+    public void onWrite(SelectionKey k) throws IOException {
+      clientChannel.write(outbuffer);
+      if (!outbuffer.hasRemaining()) { 
+        setState(ConnectionState.WRITTEN);
+        setOps(0);
+        getConnection().cleanup();
+      }
     }
 
 }

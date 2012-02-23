@@ -12,7 +12,7 @@ public interface IAsyncHandler {
 }
 
 interface IReadHandler extends IAsyncHandler {
-  public void onRead() throws IOException;
+  public void onRead(SelectionKey k) throws IOException;
 }
 
 interface IAcceptHandler extends IAsyncHandler {
@@ -20,7 +20,7 @@ interface IAcceptHandler extends IAsyncHandler {
 }
 
 interface IWriteHandler extends IAsyncHandler {
-  public void onWrite() throws IOException;
+  public void onWrite(SelectionKey k) throws IOException;
 }
 
 /*
