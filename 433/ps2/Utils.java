@@ -2,6 +2,7 @@ package syu;
 
 import java.io.*;
 import java.util.*;
+import java.nio.channels.*;
 // import static Server.*;
 // import static RequestHandler.*;
 
@@ -75,6 +76,10 @@ public class Utils
 
   public static void p(Debuggable o, int depth, String s) {
     System.out.println(indent(depth) + o.id() + ":\t" +inspect(s));
+  }
+
+  public static String port(SocketChannel sc) {
+    return sc.socket().getPort() + "";
   }
 
 /*
