@@ -32,6 +32,10 @@ public class Utils
     System.out.println(in);
   }
 
+  public static void ppp(String in) {
+    System.out.println(in);
+  }
+
 
   public static HashMap<String, String> parseArgs(String[] args) throws FileNotFoundException, IOException {
 

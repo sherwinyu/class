@@ -9,6 +9,7 @@ public class RequestHandler implements Debuggable {
 
   protected String id;
   protected Server parentServer;
+  protected FileCache sharedCache;
 
   public String id() {
     return id;
@@ -51,9 +52,10 @@ public class RequestHandler implements Debuggable {
    * Throws IOException if precondition does not hold
    */
   public WebResponse respondWithFile(File f) throws IOException {
-    int length = (int) f.length(); //TODO(syu): handle files of size greater than INT_MAX bytes?
 
+    int length = (int) f.length(); //TODO(syu): handle files of size greater than INT_MAX bytes?
     String contentType;
+
     if (f.getPath().endsWith(".jpg"))
       contentType = "image/jpeg";
     else if (f.getPath().endsWith(".gif"))
@@ -62,10 +64,22 @@ public class RequestHandler implements Debuggable {
       contentType = "text/html";
     else
       contentType = "text/plain";
+    byte[] content = null; 
 
-    FileInputStream fileStream  = new FileInputStream(f);
-    byte[] content = new byte[length];
-    fileStream.read(content);
+    if( sharedCache != null ) 
+      if (sharedCache.contains(f.getPath())) {
+        content = sharedCache.get(f.getPath());
+      }
+
+    if (content == null) {
+      FileInputStream fileStream  = new FileInputStream(f);
+      content = new byte[length];
+      fileStream.read(content);
+      if (sharedCache.roomForFile(content) ) 
+        sharedCache.put(f.getPath(), content);
+    }
+
+
 
     return WebResponse.okResponse(parentServer.serverName, contentType, length, content);
   }
