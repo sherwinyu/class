@@ -8,7 +8,7 @@ import java.nio.channels.*;
 
 public class Utils
 {
-  static boolean DEBUG = false;
+  static boolean DEBUG = true;
 
   public static String inspect(String in)
   {
