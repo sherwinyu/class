@@ -22,7 +22,7 @@ def startServer(server, config):
   return subprocess.Popen(servercommand, shell=True)
   #sproc = 
 
-parallels = [1,2,3,4,5,7,9,11,15,20,25,30,40,50,60,80,100][:5]
+parallels = [1,3,5,7,10,15,20,25,30,40,60,80,100][:]
 servers = ["SequentialServer", "ThreadPerRequestServer", "ThreadPoolCompetingServer", "ThreadPoolPollingServer", "ThreadPoolWaitNotifyServer", "AsyncServer"][:]
 configs = ["15threads", "50threads"][:]
 testLengths = [40]
@@ -30,7 +30,7 @@ testLengths = [40]
 # parallels = [1,2,3,4,5,7,9,11,15,20,25,30,40,50,60,80,100][:1]
 # servers = ["SequentialServer", "ThreadPerRequestServer", "ThreadPoolCompetingServer", "ThreadPoolPollingServer", "ThreadPoolWaitNotifyServer", "AsyncServer"][:1]
 # configs = ["15threads", "50threads"][:1]
-testLengths = [3]
+# testLengths = [3]
 
 for server in servers:
   for config in configs:
