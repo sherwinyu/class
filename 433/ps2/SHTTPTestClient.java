@@ -28,7 +28,7 @@ import java.util.*;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 
-  import static syu.Utils.*;
+import static syu.Utils.*;
 
 public class SHTTPTestClient {
 
@@ -37,6 +37,7 @@ public class SHTTPTestClient {
   protected InetSocketAddress addr;
 
   protected int threadCount;
+  protected String tag;
   protected String infile;
   protected String[] filenames;
   protected int timeout;
@@ -67,24 +68,42 @@ public class SHTTPTestClient {
     return new GetFileTasks(s, filenames, timeout, this); //  fileSizes, delays );
   }
 
-  public void start()  {
-    ppp("Beginning to send requests to " + addr);
-    try{
-      for (int i = 0; i< threadCount; i++)
-        executor.execute(createGetFileTask(addr, filenames, timeout)); //TODO(syu): pass in data structure for collecint stat summary; remove factory method
-      Thread.sleep(timeout * 1000);
-      executor.shutdownNow();
-      ppp("Terminating.");
+  protected void outputResults() {
+    try{ 
       long delaySum = 0;
       long fileSum = 0;
       for (int i : fileSizes) 
         fileSum += i;
       for (int i : delays) 
         delaySum += i;
-      ppp("mean delay :" + delaySum / delays.size());
-      ppp("total throughput: " + fileSum);
+      double meanDelay = 0;
+      double throughput = fileSum / (timeout*1000.0);
+      if (delays.size() > 0) 
+        meanDelay= delaySum / (double) delays.size();
+      ppp("meandelay(ms) " + meanDelay);
+      ppp("totalthroughput(Kbytes/s) " + throughput);
+      if (tag!=null) {
+        FileWriter fw = new FileWriter("client_results.txt", true);
+        BufferedWriter out = new BufferedWriter(fw);
+        out.write(tag + "\t" + threadCount + "\t" + (delaySum/delays.size()) + "\t" + throughput + "\n");
+        out.close();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
 
 
+  }
+
+  public void start()  {
+    p("Beginning to send requests to " + addr);
+    try{
+      for (int i = 0; i< threadCount; i++)
+        executor.execute(createGetFileTask(addr, filenames, timeout)); //TODO(syu): pass in data structure for collecint stat summary; remove factory method
+      Thread.sleep(timeout * 1000);
+      executor.shutdownNow();
+      p("Terminating.");
+      outputResults();
     }
     catch (IOException e) { e.printStackTrace(); }
     catch (InterruptedException e) { e.printStackTrace(); }
@@ -93,6 +112,7 @@ public class SHTTPTestClient {
 
   // %java SHTTPTestClient -server <server> -port <server port> -parallel <# of threads> -files <file name> -T <time of test in seconds>
   public static void main(String[] args) {
+    p("args!" + Arrays.toString(args) + "\n\n");
     SHTTPTestClient stc = null;
     try {
       stc = createFromArgs(args);
@@ -119,7 +139,8 @@ public class SHTTPTestClient {
     int threadCount = 0;
     String infile = "";
     int timeout = 5000;
-    if (args.length != 10) throw new NumberFormatException();
+    String tag = null;
+    if (args.length < 10) throw new NumberFormatException();
 
     for(int i = 0; i < args.length; i++) { // need +1 because we increment by two
       if (args[i].equals("-server")) {
@@ -146,8 +167,13 @@ public class SHTTPTestClient {
         timeout = Integer.parseInt(args[i+1]);
         continue;
       }
+      if (args[i].equals("-tag")) {
+        tag = args[i+1];
+        continue;
+      }
     }
     SHTTPTestClient stc = new SHTTPTestClient(server, port, threadCount, infile, timeout);
+    stc.tag = tag;
 
     ArrayList<String> files = new ArrayList<String>();
     BufferedReader br = new BufferedReader(new FileReader(infile));

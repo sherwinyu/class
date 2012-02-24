@@ -43,7 +43,7 @@ public class GetFileTasks implements Runnable {
 
       }
       catch (IOException e) {
-        timeup = false;
+        // timeup = false;
         p("IOError occured. " + e.getMessage());
       }
     }
@@ -54,7 +54,6 @@ public class GetFileTasks implements Runnable {
     this.socket = new Socket();
     this.socket.connect(this.addr);
     this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
-
   }
 
   public String requestFileMessage(String fn) {
@@ -72,19 +71,21 @@ public class GetFileTasks implements Runnable {
     writeMessage(rfm);
     long ts = System.currentTimeMillis();
     String resp = receiveResponse();
-
     long delay = System.currentTimeMillis() - ts;
     int size = resp.getBytes().length;
+    p(this, "Received response. Delay: " + (int) delay + "\t Size: " + size +"\t Response: " + preview(resp));
     collectStats(size, (int) delay);
-    p(this, "Received response. Delay: " + (int) delay + "\t Size: " + size +"\t Response: " + resp);
+    //p(this, "Received response. Delay: " + (int) delay + "\t Size: " + size +"\t Response: " + resp);
     // p(this, "...Delay " + (int) delay);
     // p(this, "...size " + size);
   }
 
   void collectStats(int size, int delay)
   {
-    this.delays.add( delay);
-    this.fileSizes.add(size);
+    if (delays !=null && fileSizes != null) {
+      this.delays.add(delay);
+      this.fileSizes.add(size);
+    }
   }
 
   void writeMessage(String s) throws IOException {
@@ -92,7 +93,22 @@ public class GetFileTasks implements Runnable {
   }
 
   String receiveResponse() throws IOException {
-    return new Scanner(socket.getInputStream()).useDelimiter("\\A").next();
+    InputStream is = socket.getInputStream();
+    final char[] buffer = new char[0x10000];
+    StringBuilder out = new StringBuilder();
+    Reader in = new InputStreamReader(is);
+    int read;
+    do {
+      read = in.read(buffer, 0, buffer.length);
+      // p(this, 4, "read " + read + " bytes");
+      if (read > 0) {
+        out.append(buffer, 0, read);
+      }
+    } while (read >= 0);
+    return out.toString();
+
+
+    // return new Scanner(socket.getInputStream()).useDelimiter("\\A").next();
   }
 
   // time out is in seconds

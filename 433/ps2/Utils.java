@@ -8,6 +8,8 @@ import java.nio.channels.*;
 
 public class Utils
 {
+  static boolean DEBUG = false;
+
   public static String inspect(String in)
   {
     String s = "";
@@ -24,8 +26,18 @@ public class Utils
     return s;
   }
 
+  public static String preview (String in) {
+    return in.substring(0, Math.min(200, in.length()));
+  }
+
   public static void p(String in) {
-    System.out.println(in);
+     if(DEBUG)
+      System.out.println(in);
+  }
+
+  public static void pc(String in) {
+     if(DEBUG)
+      System.out.println(in);
   }
 
   public static void pp(String in) {
@@ -40,6 +52,7 @@ public class Utils
   public static HashMap<String, String> parseArgs(String[] args) throws FileNotFoundException, IOException {
 
     HashMap<String, String> h = new HashMap<String, String>();
+    p(Arrays.toString(args));
 
     if (args.length !=2 || !args[0].equals("-config")) {
       throw new NumberFormatException();
@@ -63,7 +76,7 @@ public class Utils
   }
 
   public static void p(Server server, int depth, String s) {
-    System.out.println(indent(depth) + server.serverName + ":\t" +inspect(s));
+    p(indent(depth) + server.serverName + ":\t" +inspect(s));
   }
 
   public static void p(GetFileTasks o, String s) {
@@ -71,7 +84,7 @@ public class Utils
   }
 
   public static void p(GetFileTasks o, int depth, String s) {
-    System.out.println(indent(depth) + o.id + ":\t" +inspect(s));
+    p(indent(depth) + o.id + ":\t" +inspect(s));
   }
 
   public static void p(Debuggable o, String s) {
@@ -79,34 +92,13 @@ public class Utils
   }
 
   public static void p(Debuggable o, int depth, String s) {
-    System.out.println(indent(depth) + o.id() + ":\t" +inspect(s));
+    p(indent(depth) + o.id() + ":\t" +inspect(s));
   }
 
   public static String port(SocketChannel sc) {
     return sc.socket().getPort() + "";
   }
 
-/*
-  public static void p(RequestHandler rh, String s) {
-    p(rh, 2, s);
-  }
-
-  public static void p(RequestHandler rh, int depth, String s) {
-    p(indent(depth) + rh.id + ":\t" +inspect(s));
-  }
-
-
-  public static void p(Dispatcher o, String s) {
-    p(o, 2, s);
-  }
-
-  public static void p(Dispatcher o, int depth, String s) {
-    System.out.println(indent(depth) + o.id + ":\t" +inspect(s));
-  }
-
-
-
-  */
   private static  String indent(int n) {
     String s = "";
     for(int i = 0; i < n; i++)

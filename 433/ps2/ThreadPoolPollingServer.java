@@ -14,16 +14,22 @@ public class ThreadPoolPollingServer extends ThreadPoolServer {
   public static final String NAME = "ThreadPoolPollingServer";
   protected List<Socket> socketQueue;
 
+  public boolean isAcceptingNewConnections() {
+    synchronized(socketQueue) {
+      return socketQueue.size() < 20;
+    }
+  }
+
   public ThreadPoolPollingServer() throws IOException {
-    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS);
+    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS, FileCache.DEFAULTSIZE);
   }
 
   public ThreadPoolPollingServer(int numThreads) throws IOException {
-    this(new ServerSocket(), NAME, ".", numThreads);
+    this(new ServerSocket(), NAME, ".", numThreads, FileCache.DEFAULTSIZE);
   }
 
-  public ThreadPoolPollingServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
-    super(s, serverName, documentRoot, numThreads);
+  public ThreadPoolPollingServer(ServerSocket s, String serverName, String documentRoot, int numThreads, int cacheSize) throws IOException {
+    super(s, serverName, documentRoot, numThreads, cacheSize);
     this.threadPool = Executors.newFixedThreadPool(this.numThreads);
     socketQueue = new ArrayList<Socket>();
   }
@@ -57,7 +63,10 @@ public class ThreadPoolPollingServer extends ThreadPoolServer {
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
       int threadPoolSize = Integer.parseInt(h.get("ThreadPoolSize"));
-      ThreadPoolPollingServer server = new ThreadPoolPollingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize);
+      int cacheSize = FileCache.DEFAULTSIZE;
+      if (h.get("CacheSize") != null)
+        cacheSize = Integer.parseInt(h.get("CacheSize"));
+      ThreadPoolPollingServer server = new ThreadPoolPollingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize, cacheSize);
       (new Thread(server)).start();
     }
     catch (NumberFormatException e) {

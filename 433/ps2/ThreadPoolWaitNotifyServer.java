@@ -14,16 +14,21 @@ public class ThreadPoolWaitNotifyServer extends ThreadPoolServer {
   public static final String NAME = "ThreadPoolWaitNotifyServer";
   protected List<Socket> socketQueue;
 
+  public boolean isAcceptingNewConnections() {
+    synchronized(socketQueue) {
+      return socketQueue.size() < 20;
+    }
+  }
   public ThreadPoolWaitNotifyServer() throws IOException {
-    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS);
+    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS, FileCache.DEFAULTSIZE);
   }
 
   public ThreadPoolWaitNotifyServer(int numThreads) throws IOException {
-    this(new ServerSocket(), NAME, ".", numThreads);
+    this(new ServerSocket(), NAME, ".", numThreads, FileCache.DEFAULTSIZE);
   }
 
-  public ThreadPoolWaitNotifyServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
-    super(s, serverName, documentRoot, numThreads);
+  public ThreadPoolWaitNotifyServer(ServerSocket s, String serverName, String documentRoot, int numThreads, int cacheSize) throws IOException {
+    super(s, serverName, documentRoot, numThreads, cacheSize);
     this.threadPool = Executors.newFixedThreadPool(this.numThreads);
     socketQueue = new ArrayList<Socket>();
   }
@@ -60,7 +65,10 @@ public class ThreadPoolWaitNotifyServer extends ThreadPoolServer {
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
       int threadPoolSize = Integer.parseInt(h.get("ThreadPoolSize"));
-      ThreadPoolPollingServer server = new ThreadPoolPollingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize);
+      int cacheSize = FileCache.DEFAULTSIZE;
+      if (h.get("CacheSize") != null)
+        cacheSize = Integer.parseInt(h.get("CacheSize"));
+      ThreadPoolPollingServer server = new ThreadPoolPollingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize, cacheSize);
       (new Thread(server)).start();
     }
     catch (NumberFormatException e) {
@@ -110,7 +118,7 @@ class ThreadPoolWaitNotifyRequestHandler extends SyncRequestHandler {
         try {
           handleRequest();
         } catch (IOException e) {
-          p(this,"encounterd error in handling request\n");
+          p(this,"encounterd error in handling request");
         }
       }
     }

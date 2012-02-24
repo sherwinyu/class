@@ -33,9 +33,9 @@ public class NonblockingConnection implements Debuggable {
     this.key = sk;
     this.handler = null;
     this.dispatcher = d;
-    this.inbuffer = ByteBuffer.allocate(4096);
+    this.inbuffer = ByteBuffer.allocate(4096*1000);
     this.inbuffer.mark();
-    this.outbuffer = ByteBuffer.allocate(4096);
+    this.outbuffer = ByteBuffer.allocate(4096*1000);
     this.outbuffer.mark();
     this.state = ConnectionState.ACCEPTED;
     p(this, 4, "new connection created.");

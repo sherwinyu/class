@@ -16,9 +16,13 @@ public class AsyncServer extends Server {
 
   protected Dispatcher dispatcher;
 
-  public AsyncServer(int port, String serverName, String documentRoot) throws IOException //TODO(syu) -- what goes here?
+  public boolean isAcceptingNewConnections() {
+    return true;
+  }
+
+  public AsyncServer(int port, String serverName, String documentRoot, int cacheSize) throws IOException //TODO(syu) -- what goes here?
   {
-    super(serverName, documentRoot);
+    super(serverName, documentRoot, cacheSize);
     this.serverChannel = openServerChannelAtPort(port);
     this.serverChannel.configureBlocking(false);
     this.dispatcher = new Dispatcher(this, this.serverChannel);
@@ -49,9 +53,11 @@ public class AsyncServer extends Server {
       HashMap<String, String> h = parseArgs(args);
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
-      AsyncServer server = new AsyncServer(port, NAME, documentRoot) ;
-      // (new Thread(server)).start();
-      server.handleRequests();
+      int cacheSize = FileCache.DEFAULTSIZE;
+      if (h.get("CacheSize") != null)
+        cacheSize = Integer.parseInt(h.get("CacheSize"));
+      AsyncServer server = new AsyncServer(port, NAME, documentRoot, cacheSize) ;
+      (new Thread(server)).start();
     }
     catch (NumberFormatException e) {
       System.out.println("Usage: java " + NAME + " -config <config_file>");

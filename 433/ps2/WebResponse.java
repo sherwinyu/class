@@ -39,6 +39,14 @@ CRLF
     return true;
   }
 
+  public static WebResponse okResponse(String server) {
+    WebResponse resp = new WebResponse();
+    resp.statusCode = 200;
+    resp.message = "OK";
+    resp.server = server;
+    return resp;
+  }
+
   public static WebResponse okResponse(String server, String contentType, int length, byte[] content) {
     WebResponse resp = new WebResponse();
     resp.statusCode = 200;

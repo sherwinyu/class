@@ -12,17 +12,26 @@ public class SequentialServer extends SynchronousServer {
   protected SyncRequestHandler rh;
   protected int counter = 0;
 
-  public SequentialServer(int port, String serverName, String documentRoot) throws IOException {
-    this(new ServerSocket(port), serverName, documentRoot);
+  public boolean isAcceptingNewConnections() {
+    return true;
   }
 
-  public SequentialServer(ServerSocket sock, String serverName, String documentRoot) throws IOException {
-    super(sock, serverName, documentRoot);
+  public SequentialServer(int port, String serverName, String documentRoot) throws IOException {
+    super(new ServerSocket(port), serverName, documentRoot); //, FileCache.DEFAULTSIZE);
+  }
+
+  public SequentialServer(int port, String serverName, String documentRoot, int cacheSize) throws IOException {
+    this(new ServerSocket(port), serverName, documentRoot, cacheSize);
+  }
+
+  public SequentialServer(ServerSocket sock, String serverName, String documentRoot, int cacheSize) throws IOException {
+    super(sock, serverName, documentRoot, cacheSize);
     counter = 0;
+    p(this, "cache=" + fileCache);
   }
 
   public SequentialServer() throws IOException {
-    this(new ServerSocket(), NAME, ".");
+    this(new ServerSocket(), NAME, ".", FileCache.DEFAULTSIZE);
   }
 
 
@@ -49,7 +58,10 @@ public class SequentialServer extends SynchronousServer {
       HashMap<String, String> h = parseArgs(args);
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
-      SequentialServer server = new SequentialServer(new ServerSocket(port), NAME, documentRoot);
+      int cacheSize = FileCache.DEFAULTSIZE;
+      if (h.get("CacheSize") != null)
+        cacheSize = Integer.parseInt(h.get("CacheSize"));
+      SequentialServer server = new SequentialServer(new ServerSocket(port), NAME, documentRoot, cacheSize);
       (new Thread(server)).start();
     }
     catch (NumberFormatException e) {

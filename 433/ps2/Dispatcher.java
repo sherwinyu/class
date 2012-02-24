@@ -60,7 +60,7 @@ public class Dispatcher implements IDispatcher, Debuggable {
     }
 
   protected Set<SelectionKey> getNewEvents() throws IOException {
-    selector.select();
+    selector.select(100);
     return selector.selectedKeys();
   }
 

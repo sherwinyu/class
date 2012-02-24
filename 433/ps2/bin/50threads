@@ -1,0 +1,5 @@
+Listen 4444
+DocumentRoot gen/doc-root
+ThreadPoolSize 50
+CacheSize 5000000
+
