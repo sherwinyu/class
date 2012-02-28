@@ -1,0 +1,38 @@
+Sherwin Yu
+CS 433 PS2
+HTTP Servers
+
+The time out thread is implemented by a separate thread that checks the status of each NonblockingConnection (an abstraction containing a single request, its state, and its handler) periodically (once each second). When a new connection is accepted and the NonblockingConnection is created (in the onAccept callback), it is added to a shared set owned by the AsyncServer. The server, starts two threads -- one for the Dispatcher and one to periodically check the timeout on connections (roughly once every second). To do so, the thread loops over every NonblockingConnection and compares the creation time + timeout with the current time.  If a connection has timedout, it calls the NonblockingConnection's cleanup(), which handles cleanup on next event. The thread does directly close a channel because the we might be in the process of doing an IO operation.
+
+The timeout thread can be tested with mock objects -- I can stub RequestHandler to "block" in processRequest (using Thread.sleep(15000) ) -- then verify that the timeout thread is checking the NonblockingConnections for timeouts, and that it is calling cleanup() on the timedout connections, as expected. This can be accomplished with the Mockito mocking framework, which I used for unit testing. It allows both stubbing of mock objects and spying / verification on real objects.
+
+Server load is implemented by having RequestHandler intercept the "virtual" URL "/load" before it passes it interprets it as a file. Each RequestHandler (whether it be in its own thread,  a single instance,  or as a callback for the async server) then calls the Server's isAcceptingNewConnections() which returns true if the server is willing to accept new connections and false otherwise (the RequestHandler generates the appropriate HTTP response). 
+
+isAcceptingNewConnections() is an abstract method of Server that can be user implemented, depending on the server. For my implementations, I do the following:
+SequentialServer: always willing to accept new connections -- there is no way of telling how big the server queue is -- new connections will just sit in the listen queue.
+ThreadPerRequestServer: keeps track of how many threads there are. If there are more than 50 threads, then reject. 
+ThreadPoolCompetingServer: similar to SequentialServer -- no way of telling how big the serversocket queue is
+ThreadPoolPollingServer: if the queue is larger than 20, then reject.
+ThreadPoolWaitNotifyServer: if the queue is larger than 20, then reject.
+
+My AsyncServer implementation is based on the v3 echo server with a few key differences:
+
+The AsyncServer class follows the Server object hierarchy of the rest of my designs. It is implements runnable, so the main method actually starts a separate server thread, which in turn starts the dispatcher thread (the main thread serves as the time out thread). 
+
+Each request connection is kept in a NonblockingConnection object, which is a context that holds the dispatcher, the parent server, the client socket channel, the handler, and in and out buffers, and the current state.
+
+The NonblockingConnection is kept as the key attachment; in the dispatcher loop, upon receiving a key that is Readable/Writable, the NonblockingConnection is retrieved and its handler is called. This allows for a flexible and extensible design in which a user can associate any handler with the NonblockingConnection by calling its setHandler() method. 
+
+State is represented as a ConnectionState enum, and moves unidirectionally from ACCEPTED -> READING -> PROCESSING -> WRITING -> WRITTEN -> CLOSED
+
+The Accept Handler provides the same functionality as the v3 EchoServer, except that it uses the sets up a NonblockingConnection object for the newly accepted connection.
+
+The AsyncRequestHandler extends RequestHandler, which provides an abstraction layer shared across all servers for responding to different HTTP requests (/load, If-Modified-Since, cache check, etc) and delivering appropriate responses (200, 304, 404, 503, 500) etc. RequestHandler uses classes WebRequest and WebResponse to help manage these different cases.
+
+The AsyncRequestHandler has two callbacks -- onRead and onWrite. onRead attempts to read into the NonblockingConnection's inbuffer, and will then check whether the entire request has been read. It does so by looking for "\r\n\r\n" in the bytebuffer -- an indicator of the end of the request. If it finds it, then it sets the state to PROCESSING and unregisters interest in read events. It also calls processRequest()
+
+processRequest has the responsibility of eventually changing the state from PROCESSING to WRITING and reregistering interest in write events. processRequest is what calls the methods inherited from RequestHandler to generate the proper response, which is put into the NonblockingConnection's outbuffer. This can either be done asynchronously (by spinning off a new thread, which will set the state to WRITING appropriately when the response is ready and onWrite is the callback) or sequentially in the same thread. In my implementation, I do it in the same thread. In either case, the state is set to WRITING and the the key OP_WRITE is added to the interestOps.
+
+onWrite() simply writes out the contents of the outbuffer. If no more is to be written, it removes interest in write ops and calls cleanup() in NonblockingConnection.
+
+Overall, the major design differences are 1) separate timeout and dispatcher threads, 2) the NonblockingConnection abstraction, and 3) reorganizing functionality into my RequestHandler / Server hierarchy. 
