@@ -1,0 +1,120 @@
+
+\documentclass{article}
+
+
+\begin{document}
+\title{Flexible and Efficient Online Task Assignment in Hadoop}
+\author{Sherwin Yu}
+% Advisor: Daniel Abadi}
+\date{September 22, 2011}
+\maketitle
+
+\section{Introduction}
+\label{introduction}
+
+\subsection{Motivation}
+\label{motivation}
+The rise of internet With the rise of cheap computation and storage, massive
+amounts of data need to be processed. The data is too large to fit on a single
+computer and serial approaches to processing the data would run too slowly;
+instead, frequently such data processing is simple and embarrassingly parallel.
+Google's MapReduce is a distributed computing framework designed fo
+processing large data sets that automatically takes care of parallelization,
+scaling, and failure. Apache Hadoop is an open source implementation of
+MapReduce and has seen use by a variety of companies and research institutions.
+
+\subsection{MapReduce and Hadoop architecture}
+The Hadoop framework (and MapReduce) provides an abstraction for parallel
+computing by splitting computations into a map phase and a reduce phase. In the
+map phase, for each input data record, a key value pair is emitted, creating a
+set of intermediate key value pairs which are used in the reduce phase. For each
+key, the reduce phase merges all values associated with that key.
+
+\subsection{File storage and Data locality}
+\label{file_storage and cluster organization}
+Hadoop stores its files in the Hadoop Distributed File System (HDFS). Data sets
+and files are stored across a cluster of data nodes. Nodes are physically
+organized by rack that share a router. Racks are then joined together to form a
+cluster. Because of the inevitability of failure in a system with many
+computers, data are stored redundantly. Typically, two copies of the data are
+stored on the same rack and one is stored off rack. When a compute node (a
+mapper or reducer) needs to access data, it is fastest if the data is on node,
+slower if the data is on the same rack, and slowest if the data is off rack.
+Thus, data locality is an important consideration for efficient execution of the MapReduce job.
+
+\section{Task assignment}
+The Hadoop scheduler assigns map and reduce tasks to each node. Hadoop is
+rack-aware, meaning that it attempts to assign tasks as close to their data
+source as possible in order to minimize network latency. Task assignment has
+significant effects on overall runtime and efficiency; in particular, an even
+distribution of map tasks is desired, so map tasks finish approximately at the
+same time: a reduce task for a given key cannot start until it has received all
+of its key value pairs, and these key value pairs can come from any mapper.
+
+Su et al. have shown that optimal taks assignment in Hadoop is NP-complete.
+Previous work by other students has focused on implementing the FlowScheduler
+algorithm for scheduling, which works by first finding the max flow using Ford
+Fulkerson to assign a partial set of the tasks, and then greedily assigning the
+remaining tasks.
+
+We identified two areas for improvement upon the prior FlowScheduler work: 1)
+Although the FlowScheduler algorithm gave much better results for the actual
+scheduling, the overhead needed to run the algorithm before any map tasks could
+begin was very high, sometimes many times longer than the duration of the map
+job itself. 2) The FlowScheduler algorithm only assigns an initial schedule for
+the tasks and then assigns the remaining tasks greedily. It does not account for
+or adjust to lagging map tasks, slow nodes, or unbalanced workloads, which are
+likely to occur empirically.
+
+%\section{Previous work}
+%\label{previous_work}
+%Previously, 
+
+\section{Goals}
+\label{goals}
+
+I seek to address these areas for improvement. My primary focus will be on
+designing an online scheduling algorithm that can adapt scheduling of map tasks
+to execution anomalies such as slow nodes and failures. In particular, I seek to
+find an algorithm that emphasizes speed and flexibility of the intial assignment
+over global optimality -- the assignment should respond well to perturbations.
+I will begin with investigating online algorithms that show theoretical
+tolerance for perturbation of the initial schedule. I also seek to implement
+these algorithms and run experiments to see how well they do in a variety of
+situations, compared to one another and to FlowScheduler and the default round
+robin Hadoop scheduler.
+
+\section{Deliverables}
+\label{deliverables}
+These are the deliverables for this project.
+
+\subsection{Code}
+
+\label{labelStatement}
+The code for the scheduling algorithms will be in Java (what Hadoop is written in),
+branching from the main Hadoop repository. The code will be made available and
+open sourced via GitHub.
+
+\subsection{Report}
+\label{pres}
+I will complete a report covering the background, problem, goals, methods, and
+results.
+
+\begin{thebibliography}{99}
+\bibitem{dean} Jeffrey Dean and Sanjay Ghemawat. Mapreduce: simplified data
+processing on large clusters. Commun. ACM, 51:107-113, January 2008.
+\bibitem{fischer} Michael J. Fischer, Xueyuan Su, and Yitong Yin. Assigning
+tasks for efficiency in hadoop: extended abstract. In Proceedings of the 22nd
+ACM symposium on Parallelism in algorithms and architectures, SPAA '10, pages
+30-39, New York, NY USA, 210. ACM
+\bibitem{ghemawat} Sanjay Ghemawat, Howard Gobioff, and Shun-Tak Leung. The
+google file system. SIGOPS Oper. Syst. Rev. 37:29-43, October 2003.
+\bibitem{Zaharia}. Matei Zaharia, Andrew Konwinski, Anthony D. Joseph, Randy H. Katz,
+and Ion Stoica. Improving mapreduce performance in heterogeneous envi-
+ronments. Technical Report UCB/EECS-2008-99, EECS Department, Uni-
+versity of California, Berkeley, Aug 2008.
+ \end{thebibliography}
+
+% Stop your text
+\end{document}
+

@@ -6,8 +6,127 @@
 #include <string>
 
 #include "utils/testing.h"
+#include "txn/txn_types.h"
+#include <iostream>
 
+using namespace std;
 using std::set;
+
+TEST(LockManagerA_TestWriteLock) {
+
+  deque<Txn*> ready_txns;
+  LockManagerA lm(&ready_txns);
+  vector<Txn*> owners;
+
+  Txn* t1 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t2 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t3 = reinterpret_cast<Txn*>(new Noop());
+
+  EXPECT_EQ(true, lm.WriteLock(t1, 101));
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[101])[0].mode_);
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(t1, (*lm.lock_table_[101])[0].txn_);
+  EXPECT_EQ(1, (*lm.lock_table_[101]).size());
+
+  EXPECT_EQ(false, lm.WriteLock(t2, 101));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(1, lm.txn_waits_[t2]);
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[101])[1].mode_);
+
+  EXPECT_EQ(true, lm.WriteLock(t1, 555));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(1, lm.txn_waits_[t2]);
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(1, (*lm.lock_table_[555]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[555]).back().mode_);
+  EXPECT_EQ(t1, (*lm.lock_table_[555]).back().txn_);
+
+  EXPECT_EQ(false, lm.WriteLock(t3, 101));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(1, lm.txn_waits_[t2]);
+  EXPECT_EQ(1, lm.txn_waits_[t3]);
+  EXPECT_EQ(t3, (*lm.lock_table_[101]).back().txn_);
+  EXPECT_EQ(3, (*lm.lock_table_[101]).size());
+
+  EXPECT_EQ(false, lm.WriteLock(t2, 555));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(2, lm.txn_waits_[t2]);
+  EXPECT_EQ(1, lm.txn_waits_[t3]);
+  EXPECT_EQ(2, (*lm.lock_table_[555]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[555]).back().mode_);
+  EXPECT_EQ(t2, (*lm.lock_table_[555]).back().txn_);
+
+  END;
+}
+
+TEST(LockManagerA_TestReleaseLock) {
+  
+  printf("\n\n\n\n\n");
+  deque<Txn*> ready_txns = deque<Txn*>(0);
+  EXPECT_EQ(0, ready_txns.size());
+
+  LockManagerA lm(&ready_txns);
+  vector<Txn*> owners;
+
+  Txn* t1 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t2 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t3 = reinterpret_cast<Txn*>(new Noop());
+
+  lm.WriteLock(t1, 101);
+  lm.WriteLock(t2, 101);
+  lm.WriteLock(t3, 101);
+  EXPECT_EQ(3, (*lm.lock_table_[101]).size());
+
+  // lock_requests: t1 t2 t3
+  lm.Release(t1, 101);
+
+  // should have added t2 to ready_txns because it's up next
+  EXPECT_EQ(1, ready_txns.size());
+  EXPECT_EQ(t2, ready_txns.back());
+
+  // lock_requests: t2 t3
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[101]).at(0).mode_);
+  EXPECT_EQ(t2, (*lm.lock_table_[101]).at(0).txn_);
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[101]).back().mode_);
+  EXPECT_EQ(t3, (*lm.lock_table_[101]).back().txn_);
+
+  lm.WriteLock(t1, 101);
+  // lock requests: should be t2 t3 t1
+  lm.Release(t3, 101); 
+
+  // shouldn't have changed ready_txns
+  EXPECT_EQ(1, ready_txns.size());
+  EXPECT_EQ(t2, ready_txns.back());
+
+  // lock requests: should be t2 t1
+  EXPECT_EQ(2, lm.lock_table_[101]->size());
+  EXPECT_EQ(t2, (*lm.lock_table_[101]).at(0).txn_);
+  EXPECT_EQ(t1, (*lm.lock_table_[101]).at(1).txn_);
+
+  lm.Release(t2, 101); 
+  EXPECT_EQ(1, lm.lock_table_[101]->size());
+  EXPECT_EQ(t1, (*lm.lock_table_[101]).at(0).txn_);
+  EXPECT_EQ(1, lm.lock_table_[101]->size());
+
+  lm.Release(t1, 101); 
+  EXPECT_EQ(0, lm.lock_table_[101]->size());
+  EXPECT_EQ(0, lm.lock_table_[101]->size());
+
+  EXPECT_EQ(2, ready_txns.size());
+  EXPECT_EQ(t1, ready_txns.back());
+
+  EXPECT_EQ(true, lm.WriteLock(t1, 101));
+
+
+
+  END;
+  printf("\n\n\n\n\n");
+
+}
+
 
 TEST(LockManagerA_SimpleLocking) {
   deque<Txn*> ready_txns;
@@ -102,6 +221,83 @@ TEST(LockManagerA_LocksReleasedOutOfOrder) {
   END;
 }
 
+TEST(LockManagerB_TestReadLock) {
+  deque<Txn*> ready_txns;
+  LockManagerB lm(&ready_txns);
+
+  Txn* t1 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t2 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t3 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t4 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t5 = reinterpret_cast<Txn*>(new Noop());
+
+  // ReadLocks return true if there are only shared locks
+  EXPECT_EQ(true, lm.ReadLock(t1, 101));
+  EXPECT_EQ(true, lm.ReadLock(t2, 101));
+  EXPECT_EQ(true, lm.ReadLock(t3, 101));
+  EXPECT_EQ(false, lm.WriteLock(t4, 101));
+  EXPECT_EQ(false, lm.ReadLock(t5, 101));
+
+  END;
+}
+
+TEST(LockManagerB_TestWriteLock) {
+  deque<Txn*> ready_txns;
+  LockManagerB lm(&ready_txns);
+
+  Txn* t1 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t2 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t3 = reinterpret_cast<Txn*>(new Noop());
+
+  EXPECT_EQ(true, lm.WriteLock(t1, 101));
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[101])[0].mode_);
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(t1, (*lm.lock_table_[101])[0].txn_);
+  EXPECT_EQ(1, (*lm.lock_table_[101]).size());
+
+  EXPECT_EQ(false, lm.WriteLock(t2, 101));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(1, lm.txn_waits_[t2]);
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[101])[1].mode_);
+
+  EXPECT_EQ(true, lm.WriteLock(t1, 555));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(1, lm.txn_waits_[t2]);
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(2, (*lm.lock_table_[101]).size());
+  EXPECT_EQ(1, (*lm.lock_table_[555]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[555]).back().mode_);
+  EXPECT_EQ(t1, (*lm.lock_table_[555]).back().txn_);
+
+  EXPECT_EQ(false, lm.WriteLock(t3, 101));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(1, lm.txn_waits_[t2]);
+  EXPECT_EQ(1, lm.txn_waits_[t3]);
+  EXPECT_EQ(t3, (*lm.lock_table_[101]).back().txn_);
+  EXPECT_EQ(3, (*lm.lock_table_[101]).size());
+
+  EXPECT_EQ(false, lm.WriteLock(t2, 555));
+  EXPECT_EQ(0, lm.txn_waits_[t1]);
+  EXPECT_EQ(2, lm.txn_waits_[t2]);
+  EXPECT_EQ(1, lm.txn_waits_[t3]);
+  EXPECT_EQ(2, (*lm.lock_table_[555]).size());
+  EXPECT_EQ(EXCLUSIVE, (*lm.lock_table_[555]).back().mode_);
+  EXPECT_EQ(t2, (*lm.lock_table_[555]).back().txn_);
+
+  END;
+}
+
+TEST(LockManagerB_TestStatus) {
+
+  END;
+}
+
+TEST(LockManagerB_TestRelease) {
+  END;
+}
+
+
 
 TEST(LockManagerB_SimpleLocking) {
   deque<Txn*> ready_txns;
@@ -187,9 +383,13 @@ TEST(LockManagerB_LocksReleasedOutOfOrder) {
 }
 
 int main(int argc, char** argv) {
+  LockManagerA_TestWriteLock();
+  LockManagerA_TestReleaseLock();
   LockManagerA_SimpleLocking();
   LockManagerA_LocksReleasedOutOfOrder();
-  LockManagerB_SimpleLocking();
-  LockManagerB_LocksReleasedOutOfOrder();
+  LockManagerB_TestWriteLock();
+  LockManagerB_TestReadLock();
+  // LockManagerB_SimpleLocking();
+  // LockManagerB_LocksReleasedOutOfOrder();
 }
 
