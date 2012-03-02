@@ -9,6 +9,7 @@ public class RequestHandler implements Debuggable {
 
   protected String id;
   protected Server parentServer;
+  //protected FileCache sharedCache;
 
   public String id() {
     return id;
@@ -29,10 +30,21 @@ public class RequestHandler implements Debuggable {
 
   protected WebResponse generateResponse(WebRequest req) {
     WebResponse resp = new WebResponse();
-    if (req.urlName.equals("load"))
+    if (req.urlName.equals("load")) {
+      if(parentServer.isAcceptingNewConnections())
+        return WebResponse.okResponse(parentServer.serverName);
       return WebResponse.serverOverloadedResponse(parentServer.serverName);
+    }
 
-    File f = new File(parentServer.documentRoot, req.urlName);
+    String filename = req.urlName;
+    if (req.urlName.equals("/")) {
+      String indexString = "index.html";
+      if (req.userAgent != null && req.userAgent.indexOf("phone") != -1) // contains phone
+        indexString = "index_m.html";
+      filename =  indexString;
+    }
+
+    File f = new File(parentServer.documentRoot, filename);
     if (!f.exists()) // 2. If doesn't exist -> return 404
       return WebResponse.fileNotFoundResponse(parentServer.serverName);
     if (req.ifModifiedSince != null) // 3. If Modified Since -> return 304
@@ -41,6 +53,7 @@ public class RequestHandler implements Debuggable {
     try {
       return respondWithFile(f); // 4. Return file (checks cache automatically)
     } catch (Exception e) {
+      e.printStackTrace();
       return WebResponse.internalServerErrorResponse(parentServer.serverName); // Otherwise, return internal server error
     }
   }
@@ -51,9 +64,11 @@ public class RequestHandler implements Debuggable {
    * Throws IOException if precondition does not hold
    */
   public WebResponse respondWithFile(File f) throws IOException {
-    int length = (int) f.length(); //TODO(syu): handle files of size greater than INT_MAX bytes?
+      p("responding with file " + parentServer.fileCache);
 
+    int length = (int) f.length(); //TODO(syu): handle files of size greater than INT_MAX bytes?
     String contentType;
+
     if (f.getPath().endsWith(".jpg"))
       contentType = "image/jpeg";
     else if (f.getPath().endsWith(".gif"))
@@ -62,10 +77,26 @@ public class RequestHandler implements Debuggable {
       contentType = "text/html";
     else
       contentType = "text/plain";
+    byte[] content = null; 
 
-    FileInputStream fileStream  = new FileInputStream(f);
-    byte[] content = new byte[length];
-    fileStream.read(content);
+      // p("cacheable!" + parentServer.fileCache + parentServer.fileCache.roomForFile();
+    if( parentServer.fileCache != null ) 
+      if(parentServer.fileCache.contains(f.getPath())) {
+        content = parentServer.fileCache.get(f.getPath());
+        p("cache gotten. is content null? " + preview(new String(content)));
+      }
+
+    if (content == null) {
+      FileInputStream fileStream  = new FileInputStream(f);
+      content = new byte[length];
+      fileStream.read(content);
+      if (parentServer.fileCache != null && parentServer.fileCache.roomForFile(content) )  {
+        parentServer.fileCache.put(f.getPath(), content);
+        p("cache add!" + parentServer.fileCache);
+      }
+    }
+
+
 
     return WebResponse.okResponse(parentServer.serverName, contentType, length, content);
   }

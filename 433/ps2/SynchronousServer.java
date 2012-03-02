@@ -19,7 +19,14 @@ public abstract class SynchronousServer extends Server {
 
   public SynchronousServer (ServerSocket sock, String serverName, String documentRoot) throws IOException {
 
-    super(serverName, documentRoot);
+    super(serverName, documentRoot, FileCache.DEFAULTSIZE);
+    this.listenSocket = sock;
+    p(this, 1,  "server listening at: " + listenSocket);
+    p(this, 1, "server www root: " + documentRoot);
+  }
+  public SynchronousServer (ServerSocket sock, String serverName, String documentRoot, int cacheSize) throws IOException {
+
+    super(serverName, documentRoot, cacheSize);
     this.listenSocket = sock;
     p(this, 1,  "server listening at: " + listenSocket);
     p(this, 1, "server www root: " + documentRoot);

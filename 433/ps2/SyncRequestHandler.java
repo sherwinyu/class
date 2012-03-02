@@ -37,14 +37,16 @@ public class SyncRequestHandler extends RequestHandler implements Runnable {
 
   public void handleRequest() throws IOException {
     String requestString = readRequest( connectionSocket.getInputStream() );
-    p(this,"Read FRM: " + connectionSocket.toString() + " \t request: " + requestString);
+    p(this,"Read FRM: " + connectionSocket.toString() + " \t request: " + preview(requestString));
     String respString = getResponseString(requestString);
 
     // String respString = resp.toString();
     try {
+      p(this,"Write TO: " + this.connectionSocket.toString() + "\t response:" +  preview(respString));
       writeResponse(respString, new DataOutputStream(connectionSocket.getOutputStream()));
-      p(this,"Write TO: " + this.connectionSocket.toString() + "\t response:" +  respString);
       connectionSocket.close();
+      p(this, "connection closed");
+
     }
     catch (SocketException e) {p(this, "client (" + connectionSocket + ") hung up"); }
   }

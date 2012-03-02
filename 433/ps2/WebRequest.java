@@ -41,12 +41,15 @@ public class WebRequest {
   public boolean fromString(String in) {
     String[] lines = in.split("\r\n"); // HTTP standard requires \r\n, but most servers accept just \n as line ender;
     try {
-      if (lines.length < 1)
+      if (lines.length < 1) {
+        p("   badRquest because lines too few");
         return false;
+      }
 
       String[] requestLineTokens = lines[0].split("\\s+");
 
       if (requestLineTokens.length < 3 || !requestLineTokens[0].equals("GET") || !requestLineTokens[2].startsWith("HTTP/1.")) {
+        p("   badRquest because linetokens too short");
         return false;
       }
       this.method = requestLineTokens[0];

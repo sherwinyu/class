@@ -11,13 +11,13 @@ public class ThreadPerRequestServer extends SequentialServer {
   static final String NAME = "ThreadPerRequestServer";
   int numThreadsStarted;
 
-  public ThreadPerRequestServer(ServerSocket sock, String serverName, String documentRoot) throws IOException {
-    super(sock, serverName, documentRoot);
+  public ThreadPerRequestServer(ServerSocket sock, String serverName, String documentRoot, int cacheSize) throws IOException {
+    super(sock, serverName, documentRoot, cacheSize);
     numThreadsStarted = 0;
   }
 
   public ThreadPerRequestServer() throws IOException {
-    this(new ServerSocket(), NAME, ".");
+    this(new ServerSocket(), NAME, ".", FileCache.DEFAULTSIZE);
   }
 
   @Override
@@ -45,7 +45,10 @@ public class ThreadPerRequestServer extends SequentialServer {
       HashMap<String, String> h = parseArgs(args);
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
-      ThreadPerRequestServer server = new ThreadPerRequestServer(new ServerSocket(port), NAME, documentRoot);
+      int cacheSize = FileCache.DEFAULTSIZE;
+      if (h.get("CacheSize") != null)
+        cacheSize = Integer.parseInt(h.get("CacheSize"));
+      ThreadPerRequestServer server = new ThreadPerRequestServer(new ServerSocket(port), NAME, documentRoot, cacheSize);
       (new Thread(server)).start();
     }
     catch (NumberFormatException e) {

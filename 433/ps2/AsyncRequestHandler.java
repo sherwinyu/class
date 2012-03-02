@@ -79,15 +79,18 @@ String readSoFar = "";
 
     p(this, 4, "processing request");
     String responseString = getResponseString(readSoFar);
-    p(this, 4, "response = " + responseString);
+    p(this, 4, "responseSize = " + responseString.getBytes().length);
+    p(this, 4, "response = " + responseString.substring(0,Math.min(100,responseString.length()-1)));
     setState(ConnectionState.WRITING);
     setOps(getConnection().key.interestOps() | SelectionKey.OP_WRITE);
     outbuffer.put(responseString.getBytes());
     outbuffer.flip();
+    p(this, 4, "flipped");
   }
 
   @Override
     public void onWrite(SelectionKey k) throws IOException {
+      p(this, 4, "writing");
       clientChannel.write(outbuffer);
       if (!outbuffer.hasRemaining()) { 
         setState(ConnectionState.WRITTEN);

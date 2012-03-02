@@ -60,7 +60,7 @@ public class Dispatcher implements IDispatcher, Debuggable {
     }
 
   protected Set<SelectionKey> getNewEvents() throws IOException {
-    selector.select();
+    selector.select(100);
     return selector.selectedKeys();
   }
 
@@ -100,10 +100,11 @@ public class Dispatcher implements IDispatcher, Debuggable {
     // getConnectionFromKey(key).getHandler().
     ((IAcceptHandler) key.attachment()).onAccept(key);
   }
+
   protected void handleRead(SelectionKey key) throws IOException {
     ((IReadHandler) ((NonblockingConnection) key.attachment()).handler).onRead(key);
-
   }
+
   protected void handleWrite(SelectionKey key) throws IOException {
     ((IWriteHandler) ((NonblockingConnection) key.attachment()).handler).onWrite(key);
   }

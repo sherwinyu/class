@@ -11,16 +11,20 @@ public class ThreadPoolCompetingServer extends ThreadPoolServer {
 
   public static final String NAME = "ThreadPoolCompetingServer";
 
+  public boolean isAcceptingNewConnections() {
+    return true;
+  }
+
   public ThreadPoolCompetingServer() throws IOException {
-    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS);
+    this(new ServerSocket(), NAME, ".", ThreadPoolServer.NUM_DEFAULT_THREADS, FileCache.DEFAULTSIZE);
   }
 
   public ThreadPoolCompetingServer(int numThreads) throws IOException {
-    this(new ServerSocket(), NAME, ".", numThreads);
+    this(new ServerSocket(), NAME, ".", numThreads, FileCache.DEFAULTSIZE);
   }
 
-  public ThreadPoolCompetingServer(ServerSocket s, String serverName, String documentRoot, int numThreads) throws IOException {
-    super(s, serverName, documentRoot, numThreads);
+  public ThreadPoolCompetingServer(ServerSocket s, String serverName, String documentRoot, int numThreads, int cacheSize) throws IOException {
+    super(s, serverName, documentRoot, numThreads, cacheSize);
     this.threadPool = Executors.newFixedThreadPool(this.numThreads);
   }
 
@@ -42,7 +46,9 @@ public class ThreadPoolCompetingServer extends ThreadPoolServer {
     }
 
   public ThreadPoolCompetingRequestHandler newThreadPoolCompetingRequestHandler() {
-    return new ThreadPoolCompetingRequestHandler(this);
+    ThreadPoolCompetingRequestHandler t =  new ThreadPoolCompetingRequestHandler(this);
+    t.id = "" + count++;
+    return t;
   }
 
   public static void main (String[] args) {
@@ -51,7 +57,10 @@ public class ThreadPoolCompetingServer extends ThreadPoolServer {
       int port = Integer.parseInt(h.get("Listen"));
       String documentRoot = h.get("DocumentRoot");
       int threadPoolSize = Integer.parseInt(h.get("ThreadPoolSize"));
-      ThreadPoolCompetingServer server = new ThreadPoolCompetingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize);
+      int cacheSize = FileCache.DEFAULTSIZE;
+      if (h.get("CacheSize") != null)
+        cacheSize = Integer.parseInt(h.get("CacheSize"));
+      ThreadPoolCompetingServer server = new ThreadPoolCompetingServer(new ServerSocket(port), NAME, documentRoot, threadPoolSize, cacheSize);
       (new Thread(server)).start();
     }
     catch (NumberFormatException e) {
