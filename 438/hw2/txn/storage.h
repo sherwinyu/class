@@ -7,6 +7,7 @@
 #include <tr1/unordered_map>
 #include <deque>
 #include <map>
+#include <vector>
 
 #include "txn/common.h"
 #include "txn/txn.h"
@@ -14,6 +15,7 @@
 using std::tr1::unordered_map;
 using std::deque;
 using std::map;
+using std::vector;
 
 class Storage {
  public:
@@ -29,7 +31,7 @@ class Storage {
   // updated (returns 0 if the record has never been updated).
   double Timestamp(Key key);
 
- private:
+ //private: TODO(syu): undo this
   // Collection of <key, value> pairs.
   unordered_map<Key, Value> data_;
 
@@ -56,6 +58,7 @@ class MVStorage {
              const map<uint64, TxnStatus>& pg_log_snapshot);
 
  private:
+  unordered_map<Key, vector<vector<uint64>*>* > data_;
   // CPSC 438/538:
   //
   // You will need to implement a multi-version storage structure for MVStorage

@@ -112,7 +112,7 @@ class AtomicQueue {
   AtomicQueue() {}
 
   // Returns the number of elements currently in the queue.
-  void Size() {
+  int Size() {
     mutex_.Lock();
     int size = queue_.size();
     mutex_.Unlock();

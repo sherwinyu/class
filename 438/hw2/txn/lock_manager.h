@@ -66,7 +66,7 @@ class LockManager {
   // held, SHARED or EXCLUSIVE if it is, depending on the current state.
   virtual LockMode Status(const Key& key, vector<Txn*>* owners) = 0;
 
- // protected: TODO(SYU): un do this! for testing purposes only
+ // protected: TODO(SYU): undo this! for testing purposes only
   // The LockManager's lock table tracks all lock requests. For a given key, if
   // 'lock_table_' contains a nonempty deque, then the item with that key is
   // locked and either:

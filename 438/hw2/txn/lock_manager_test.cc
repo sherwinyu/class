@@ -62,8 +62,7 @@ TEST(LockManagerA_TestWriteLock) {
 }
 
 TEST(LockManagerA_TestReleaseLock) {
-  
-  printf("\n\n\n\n\n");
+
   deque<Txn*> ready_txns = deque<Txn*>(0);
   EXPECT_EQ(0, ready_txns.size());
 
@@ -231,12 +230,22 @@ TEST(LockManagerB_TestReadLock) {
   Txn* t4 = reinterpret_cast<Txn*>(new Noop());
   Txn* t5 = reinterpret_cast<Txn*>(new Noop());
 
-  // ReadLocks return true if there are only shared locks
+  // ReadLocks return true if the queue does not exist yet;
   EXPECT_EQ(true, lm.ReadLock(t1, 101));
+  EXPECT_EQ(1, lm.lock_table_[101]->size());
+
   EXPECT_EQ(true, lm.ReadLock(t2, 101));
+  EXPECT_EQ(2, lm.lock_table_[101]->size());
+
   EXPECT_EQ(true, lm.ReadLock(t3, 101));
+  EXPECT_EQ(3, lm.lock_table_[101]->size());
+
   EXPECT_EQ(false, lm.WriteLock(t4, 101));
+  EXPECT_EQ(4, lm.lock_table_[101]->size());
+
+  // ReadLocks returns false because tehre's a write lock now
   EXPECT_EQ(false, lm.ReadLock(t5, 101));
+  EXPECT_EQ(5, lm.lock_table_[101]->size());
 
   END;
 }
@@ -288,13 +297,121 @@ TEST(LockManagerB_TestWriteLock) {
   END;
 }
 
-TEST(LockManagerB_TestStatus) {
 
+TEST(LockManagerB_TestRelease) {
+
+  deque<Txn*> ready_txns = deque<Txn*>(0);
+  EXPECT_EQ(0, ready_txns.size());
+
+  LockManagerB lm(&ready_txns);
+  vector<Txn*> owners;
+
+  Txn* t1 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t2 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t3 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t4 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t5 = reinterpret_cast<Txn*>(new Noop());
+  // If the lock to be released is exclusive and was found at the beginning,
+  // should decrement next batch (both cases: next batch is write lock, next
+  // batch is read lock)
+  //
+  // Case 1: to be decremented is a write lock
+  ready_txns.clear();
+  EXPECT_EQ(true, lm.WriteLock(t1, 101));
+  EXPECT_EQ(false, lm.WriteLock(t2, 101));
+  lm.Release(t1, 101);
+
+  EXPECT_EQ(1, ready_txns.size());
+  EXPECT_EQ(t2, ready_txns.back());
+  EXPECT_EQ(1, lm.lock_table_[101]->size());
+
+  // Case 2: to be decremented is a series of read locks
+  ready_txns.clear();
+  EXPECT_EQ(true, lm.WriteLock(t1, 222));
+  EXPECT_EQ(false, lm.ReadLock(t2, 222));
+  EXPECT_EQ(false, lm.ReadLock(t3, 222));
+  EXPECT_EQ(false, lm.ReadLock(t4, 222));
+  lm.Release(t1, 222);
+
+  EXPECT_EQ(3, lm.lock_table_[222]->size());
+  EXPECT_EQ(3, ready_txns.size());
+  EXPECT_EQ(t2, ready_txns[0]);
+  EXPECT_EQ(t3, ready_txns[1]);
+  EXPECT_EQ(t4, ready_txns[2]);
+
+  // If the lock to  be released is exclusive and not found at beginning, should
+  // just erase the lock
+
+  ready_txns.clear();
+  EXPECT_EQ(true, lm.WriteLock(t1, 333));
+  EXPECT_EQ(false, lm.ReadLock(t2, 333));
+  EXPECT_EQ(false, lm.WriteLock(t2, 333));
+  lm.Release(t2, 333); 
+  EXPECT_EQ(0, ready_txns.size());
+  EXPECT_EQ(2, lm.lock_table_[333]->size());
+
+  // If the lock to be relased is shared and is the only one remaining before
+  // exclusive locks, then the exclusive lock's wait should be decremented.
+  // If the lock to be released is sahred and is NOT the only one remaining
+  // before exlcusive locks, then it should just be erased.
+  ready_txns.clear();
+  EXPECT_EQ(true, lm.ReadLock(t1, 444));
+  EXPECT_EQ(true, lm.ReadLock(t2, 444));
+  EXPECT_EQ(true, lm.ReadLock(t3, 444));
+  EXPECT_EQ(false, lm.WriteLock(t4, 444));
+  lm.Release(t2, 444);
+  EXPECT_EQ(0, ready_txns.size());
+  EXPECT_EQ(3, lm.lock_table_[444]->size());
+  lm.Release(t3, 444);
+  EXPECT_EQ(0, ready_txns.size());
+  EXPECT_EQ(2, lm.lock_table_[444]->size());
+  lm.Release(t1, 444);
+  EXPECT_EQ(1, ready_txns.size());
+  EXPECT_EQ(t4, ready_txns.back());
+  EXPECT_EQ(1, lm.lock_table_[444]->size());
+
+  // If the lock to be released is not in the beginning run, it should just be
+  // erased
+  ready_txns.clear();
+  EXPECT_EQ(true, lm.ReadLock(t1, 555));
+  EXPECT_EQ(true, lm.ReadLock(t2, 555));
+  EXPECT_EQ(true, lm.ReadLock(t3, 555));
+  EXPECT_EQ(false, lm.WriteLock(t4, 555));
+  EXPECT_EQ(false, lm.ReadLock(t5, 555));
+  lm.Release(t5, 555);
+  EXPECT_EQ(0, ready_txns.size());
+  EXPECT_EQ(4, lm.lock_table_[555]->size());
+  EXPECT_EQ(t4, lm.lock_table_[555]->back().txn_);
   END;
 }
 
-TEST(LockManagerB_TestRelease) {
+TEST(LockManagerB_TestStatus) {
+
+
+  deque<Txn*> ready_txns = deque<Txn*>(0);
+  EXPECT_EQ(0, ready_txns.size());
+
+  LockManagerB lm(&ready_txns);
+  vector<Txn*> owners;
+
+  Txn* t1 = reinterpret_cast<Txn*>(new Noop());
+  Txn* t2 = reinterpret_cast<Txn*>(new Noop());
+
+  ready_txns.clear();
+  EXPECT_EQ(true, lm.WriteLock(t1, 101));
+  EXPECT_EQ(false, lm.WriteLock(t2, 101));
+  EXPECT_EQ(EXCLUSIVE, lm.Status(101, &owners));
+  EXPECT_EQ(1, owners.size());
+
+  EXPECT_EQ(true, lm.ReadLock(t1, 222));
+  EXPECT_EQ(true, lm.ReadLock(t2, 222));
+  EXPECT_EQ(true, lm.ReadLock(t2, 222));
+  EXPECT_EQ(false, lm.WriteLock(t2, 222));
+  EXPECT_EQ(SHARED, lm.Status(222, &owners));
+  EXPECT_EQ(3, owners.size());
+
   END;
+
 }
 
 
@@ -389,7 +506,9 @@ int main(int argc, char** argv) {
   LockManagerA_LocksReleasedOutOfOrder();
   LockManagerB_TestWriteLock();
   LockManagerB_TestReadLock();
-  // LockManagerB_SimpleLocking();
-  // LockManagerB_LocksReleasedOutOfOrder();
+  LockManagerB_TestRelease();
+  LockManagerB_TestStatus();
+  LockManagerB_SimpleLocking();
+  LockManagerB_LocksReleasedOutOfOrder();
 }
 

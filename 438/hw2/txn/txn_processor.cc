@@ -11,17 +11,17 @@
 #define QUEUE_COUNT 10
 
 TxnProcessor::TxnProcessor(CCMode mode)
-    : mode_(mode), tp_(THREAD_COUNT, QUEUE_COUNT), next_unique_id_(1),
-      next_mvcc_txn_id_(1) {
-  if (mode_ == LOCKING_EXCLUSIVE_ONLY || mode_ == MVCC)
-    lm_ = new LockManagerA(&ready_txns_);
-  else if (mode_ == LOCKING)
-    lm_ = new LockManagerB(&ready_txns_);
+  : mode_(mode), tp_(THREAD_COUNT, QUEUE_COUNT), next_unique_id_(1),
+  next_mvcc_txn_id_(1) {
+    if (mode_ == LOCKING_EXCLUSIVE_ONLY || mode_ == MVCC)
+      lm_ = new LockManagerA(&ready_txns_);
+    else if (mode_ == LOCKING)
+      lm_ = new LockManagerB(&ready_txns_);
 
-  // Start 'RunScheduler()' running as a new task in its own thread.
-  tp_.RunTask(
+    // Start 'RunScheduler()' running as a new task in its own thread.
+    tp_.RunTask(
         new Method<TxnProcessor, void>(this, &TxnProcessor::RunScheduler));
-}
+  }
 
 TxnProcessor::~TxnProcessor() {
   if (mode_ == LOCKING_EXCLUSIVE_ONLY || mode_ == LOCKING)
@@ -50,11 +50,11 @@ Txn* TxnProcessor::GetTxnResult() {
 
 void TxnProcessor::RunScheduler() {
   switch (mode_) {
-    case SERIAL:                 RunSerialScheduler();
-    case LOCKING:                RunLockingScheduler();
-    case LOCKING_EXCLUSIVE_ONLY: RunLockingScheduler();
-    case OCC:                    RunOCCScheduler();
-    case MVCC:                   RunMVCCScheduler();
+    case SERIAL:                 RunSerialScheduler(); break;
+    case LOCKING:                RunLockingScheduler(); break;
+    case LOCKING_EXCLUSIVE_ONLY: RunLockingScheduler(); break;
+    case OCC:                    RunOCCScheduler(); break;
+    case MVCC:                   RunMVCCScheduler(); break;
   }
 }
 
@@ -63,6 +63,7 @@ void TxnProcessor::RunSerialScheduler() {
   while (tp_.Active()) {
     // Get next txn request.
     if (txn_requests_.Pop(&txn)) {
+      printf("RSS: txn_requests.size %d\n", txn_requests_.Size());
       // Execute txn.
       ExecuteTxn(txn);
 
@@ -88,18 +89,20 @@ void TxnProcessor::RunLockingScheduler() {
   while (tp_.Active()) {
     // Start processing the next incoming transaction request.
     if (txn_requests_.Pop(&txn)) {
+      //printf("RLS: txn_requests.size %d\n", txn_requests_.Size());
+      printf("RLS processing new txn: %p, id: %ld\n",  txn, txn->unique_id_);
       int blocked = 0;
 
       // Request read locks.
       for (set<Key>::iterator it = txn->readset_.begin();
-           it != txn->readset_.end(); ++it) {
+          it != txn->readset_.end(); ++it) {
         if (!lm_->ReadLock(txn, *it))
           blocked++;
       }
 
       // Request write locks.
       for (set<Key>::iterator it = txn->writeset_.begin();
-           it != txn->writeset_.end(); ++it) {
+          it != txn->writeset_.end(); ++it) {
         if (!lm_->WriteLock(txn, *it))
           blocked++;
       }
@@ -114,12 +117,12 @@ void TxnProcessor::RunLockingScheduler() {
     while (completed_txns_.Pop(&txn)) {
       // Release read locks.
       for (set<Key>::iterator it = txn->readset_.begin();
-           it != txn->readset_.end(); ++it) {
+          it != txn->readset_.end(); ++it) {
         lm_->Release(txn, *it);
       }
       // Release write locks.
       for (set<Key>::iterator it = txn->writeset_.begin();
-           it != txn->writeset_.end(); ++it) {
+          it != txn->writeset_.end(); ++it) {
         lm_->Release(txn, *it);
       }
 
@@ -155,26 +158,78 @@ void TxnProcessor::RunLockingScheduler() {
 }
 
 void TxnProcessor::RunOCCScheduler() {
-  // CPSC 438/538:
-  //
-  // Implement this method! Note that implementing OCC may require
-  // modifications to the Storage engine (and therefore to the 'ExecuteTxn'
-  // method below).
-  //
-  // [For now, run serial scheduler in order to make it through the test suite.]
-  RunSerialScheduler();
+
+  Txn* txn;
+  while (tp_.Active()) {
+    // Get the next new transaction request (if one is pending) and start it running.
+    // printf("while true");
+    if (txn_requests_.Pop(&txn)) {
+      // printf("txn_requests.size %d\n", txn_requests_.Size());
+      // printf("processing new txn: %p, id: %ld; txnreqs_size=%d\n",  txn, txn->unique_id_, txn_requests_.Size());
+      txn->occ_start_time_ = GetTime();
+      tp_.RunTask(new Method<TxnProcessor, void, Txn*>(
+            this,
+            &TxnProcessor::ExecuteTxn,
+            txn));
+    }
+
+    // Deal with all transactions that have finished running.
+    while (completed_txns_.Pop(&txn)) {
+
+      if (txn->Status() == COMPLETED_A) {
+        txn->status_ = ABORTED;
+        txn_results_.Push(txn);
+        continue;
+      }
+      else if (txn->Status() != COMPLETED_C) {
+        // Invalid TxnStatus!
+        DIE("Completed Txn has invalid TxnStatus: " << txn->Status());
+      }
+
+      // Begin validation. txn status must be COMPLETED_C at this point.
+      bool valid = true;
+      set<Key>::iterator it;
+  
+      // Check both read/write sets and invalidate if existing record is newer
+      for (it = txn->readset_.begin(); it != txn->readset_.end(); it++ )
+        if  (storage_.Timestamp(*it) > txn->occ_start_time_)
+          valid = false;
+      for (it = txn->writeset_.begin(); it != txn->writeset_.end(); it++ )
+        if (storage_.Timestamp(*it) > txn->occ_start_time_)
+          valid = false;
+
+
+     // if invalid, restart transaction
+      if (!valid) {
+        txn->status_ = INCOMPLETE;
+        txn->occ_start_time_ = GetTime();
+        tp_.RunTask(new Method<TxnProcessor, void, Txn*>(
+              this,
+              &TxnProcessor::ExecuteTxn,
+              txn));
+      } else {
+        // Apply all writes.
+        // Mark transaction as committed. (ApplyWrites does this for us, though it probably shouldn't)
+        ApplyWrites(txn);
+        txn_results_.Push(txn);
+      }
+    }
+
+  }
 }
 
 void TxnProcessor::RunMVCCScheduler() {
   Txn* txn;
   while (tp_.Active()) {
     // Start processing the next incoming transaction request.
+    // Request locks on transaction's writeset (but not readset), using the lock manager you implemented in part 1A.
+    // If it has successfully acquired all locks, add it to the ready-to-run queue.
     if (txn_requests_.Pop(&txn)) {
       int blocked = 0;
 
       // Request write locks.
       for (set<Key>::iterator it = txn->writeset_.begin();
-           it != txn->writeset_.end(); ++it) {
+          it != txn->writeset_.end(); ++it) {
         if (!lm_->WriteLock(txn, *it))
           blocked++;
       }
@@ -186,10 +241,14 @@ void TxnProcessor::RunMVCCScheduler() {
     }
 
     // Process and commit all transactions that have finished running.
+    // Apply all writes.
+    // Mark transaction as committed.
+    // Release all write locks.
+    // Remove this transaction's entry from pg_log. [IMPORTANT: This is different from how postgreSQL implements updates.]
     while (completed_txns_.Pop(&txn)) {
       // Release write locks.
       for (set<Key>::iterator it = txn->writeset_.begin();
-           it != txn->writeset_.end(); ++it) {
+          it != txn->writeset_.end(); ++it) {
         lm_->Release(txn, *it);
       }
 
@@ -205,13 +264,16 @@ void TxnProcessor::RunMVCCScheduler() {
         // Invalid TxnStatus!
         DIE("Completed Txn has invalid TxnStatus: " << txn->Status());
       }
-
       // Return result to client.
       txn_results_.Push(txn);
     }
 
     // Start executing all transactions that have newly acquired all their
     // locks.
+    // Assign the txn a transactionID (using 'TxnProcessor::next_mvcc_txn_id_' and 'Txn::mvcc_txn_id_').
+    // Insert this txn's transactionID into pg_log ('TxnProcessor::pg_log_').
+    // Take a snapshot of the pg_log (storing it in the txn's 'Txn::pg_log_snapshot_').
+    // Start transaction running in separate thread (but using 'TxnProcessor::ExecuteTxnMVCC' rather than 'TxnProcessor::ExecuteTxn').
     while (ready_txns_.size()) {
       txn = ready_txns_.front();
       ready_txns_.pop_front();
@@ -237,7 +299,7 @@ void TxnProcessor::RunMVCCScheduler() {
 void TxnProcessor::ExecuteTxn(Txn* txn) {
   // Read everything in from readset.
   for (set<Key>::iterator it = txn->readset_.begin();
-       it != txn->readset_.end(); ++it) {
+      it != txn->readset_.end(); ++it) {
     // Save each read result iff record exists in storage.
     Value result;
     if (storage_.Read(*it, &result))
@@ -246,7 +308,7 @@ void TxnProcessor::ExecuteTxn(Txn* txn) {
 
   // Also read everything in from writeset.
   for (set<Key>::iterator it = txn->writeset_.begin();
-       it != txn->writeset_.end(); ++it) {
+      it != txn->writeset_.end(); ++it) {
     // Save each read result iff record exists in storage.
     Value result;
     if (storage_.Read(*it, &result))
@@ -263,22 +325,22 @@ void TxnProcessor::ExecuteTxn(Txn* txn) {
 void TxnProcessor::ExecuteTxnMVCC(Txn* txn) {
   // Read everything in from readset.
   for (set<Key>::iterator it = txn->readset_.begin();
-       it != txn->readset_.end(); ++it) {
+      it != txn->readset_.end(); ++it) {
     // Save each read result iff record exists in storage.
     Value result;
     if (mv_storage_.Read(*it, &result, txn->mvcc_txn_id_,
-                         txn->pg_log_snapshot_)) {
+          txn->pg_log_snapshot_)) {
       txn->reads_[*it] = result;
     }
   }
 
   // Also read everything in from writeset.
   for (set<Key>::iterator it = txn->writeset_.begin();
-       it != txn->writeset_.end(); ++it) {
+      it != txn->writeset_.end(); ++it) {
     // Save each read result iff record exists in storage.
     Value result;
     if (mv_storage_.Read(*it, &result, txn->mvcc_txn_id_,
-                         txn->pg_log_snapshot_)) {
+          txn->pg_log_snapshot_)) {
       txn->reads_[*it] = result;
     }
   }
@@ -293,7 +355,7 @@ void TxnProcessor::ExecuteTxnMVCC(Txn* txn) {
 void TxnProcessor::ApplyWrites(Txn* txn) {
   // Write buffered writes out to storage.
   for (map<Key, Value>::iterator it = txn->writes_.begin();
-       it != txn->writes_.end(); ++it) {
+      it != txn->writes_.end(); ++it) {
     storage_.Write(it->first, it->second);
   }
 
@@ -304,9 +366,9 @@ void TxnProcessor::ApplyWrites(Txn* txn) {
 void TxnProcessor::ApplyWritesMVCC(Txn* txn) {
   // Write buffered writes out to storage.
   for (map<Key, Value>::iterator it = txn->writes_.begin();
-       it != txn->writes_.end(); ++it) {
+      it != txn->writes_.end(); ++it) {
     mv_storage_.Write(it->first, it->second, txn->mvcc_txn_id_,
-                      txn->pg_log_snapshot_);
+        txn->pg_log_snapshot_);
   }
 }
 

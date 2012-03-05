@@ -22,10 +22,24 @@ double Storage::Timestamp(Key key) {
 
 bool MVStorage::Read(Key key, Value* result, uint64 mvcc_txn_id,
                      const map<uint64, TxnStatus>& pg_log_snapshot) {
-  // CPSC 438/538:
-  //
-  // Implement this method!
-  // [Returning false for now so that we at least compile.]
+  printf("%p\n", &data_[key]);
+  vector<vector<uint64>>& rows = data_[key];
+  for(int i = 0; i < rows.siz(); i++) {
+    row = rows[i]
+  }
+
+  // Read the latest VISIBLE record version associated with 'key'. If a visible
+  // version exists, sets '*result' equal to the value and returns true,
+  // otherwise returns false.
+  if (row == 0) {
+    
+
+  }
+
+  deque<LockRequest>*& lock_requests = lock_table_[key]; 
+
+
+  printf("%ld\t%ld\t%ld\n", data_[key][0], data_[key][1], data_[key][2]);
   return false;
 }
 

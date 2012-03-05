@@ -81,7 +81,9 @@ void Benchmark(const vector<LoadGen*>& lg) {
     db_init[i] = 0;
 
   // For each MODE...
-  for (CCMode mode = SERIAL; mode <= MVCC; mode = static_cast<CCMode>(mode+1)) {
+  //TODO(syu): undo this
+  // for (CCMode mode = SERIAL; mode <= MVCC; mode = static_cast<CCMode>(mode+1)) { 
+  for (CCMode mode = MVCC; mode <= MVCC; mode = static_cast<CCMode>(mode+1)) {
     // Print out mode name.
     cout << ModeToString(mode) << flush;
 
@@ -135,6 +137,12 @@ int main(int argc, char** argv) {
   cout << "\t\t\t    Average Transaction Duration" << endl;
   cout << "\t\t0.1ms\t\t1ms\t\t10ms\t\t100ms";
   cout << endl;
+
+
+  // TxnProcessor* p = new TxnProcessor(mode);
+
+  // printf("herpdiderp");
+  // exit(0);
 
   vector<LoadGen*> lg;
 
