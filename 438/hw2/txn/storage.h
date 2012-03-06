@@ -58,7 +58,7 @@ class MVStorage {
              const map<uint64, TxnStatus>& pg_log_snapshot);
 
  private:
-  unordered_map<Key, vector<vector<uint64>*>* > data_;
+  unordered_map<Key, vector< vector<uint64> > > data_;
   // CPSC 438/538:
   //
   // You will need to implement a multi-version storage structure for MVStorage

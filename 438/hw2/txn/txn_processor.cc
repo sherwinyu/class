@@ -40,11 +40,7 @@ void TxnProcessor::NewTxnRequest(Txn* txn) {
 
 Txn* TxnProcessor::GetTxnResult() {
   Txn* txn;
-  while (!txn_results_.Pop(&txn)) {
-    // No result yet. Wait a bit before trying again (to reduce contention on
-    // atomic queues).
-    sleep(0.000001);
-  }
+  while (!txn_results_.Pop(&txn)) { // No result yet. Wait a bit before trying again (to reduce contention on // atomic queues).  sleep(0.000001); }
   return txn;
 }
 
