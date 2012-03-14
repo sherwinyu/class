@@ -40,7 +40,8 @@ void TxnProcessor::NewTxnRequest(Txn* txn) {
 
 Txn* TxnProcessor::GetTxnResult() {
   Txn* txn;
-  while (!txn_results_.Pop(&txn)) { // No result yet. Wait a bit before trying again (to reduce contention on // atomic queues).  sleep(0.000001); }
+  while (!txn_results_.Pop(&txn)) { // No result yet. Wait a bit before trying again (to reduce contention on // atomic queues).  sleep(0.000001);
+  }
   return txn;
 }
 
@@ -59,7 +60,6 @@ void TxnProcessor::RunSerialScheduler() {
   while (tp_.Active()) {
     // Get next txn request.
     if (txn_requests_.Pop(&txn)) {
-      printf("RSS: txn_requests.size %d\n", txn_requests_.Size());
       // Execute txn.
       ExecuteTxn(txn);
 
@@ -86,7 +86,7 @@ void TxnProcessor::RunLockingScheduler() {
     // Start processing the next incoming transaction request.
     if (txn_requests_.Pop(&txn)) {
       //printf("RLS: txn_requests.size %d\n", txn_requests_.Size());
-      printf("RLS processing new txn: %p, id: %ld\n",  txn, txn->unique_id_);
+      //printf("RLS processing new txn: %p, id: %ld\n",  txn, txn->unique_id_);
       int blocked = 0;
 
       // Request read locks.

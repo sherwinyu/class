@@ -74,7 +74,7 @@ void LockManagerA::Release(Txn* txn, const Key& key) {
     }
   }
   else { // cancelled
-    printf("Erasing %p\n", it->txn_);
+    // printf("Erasing %p\n", it->txn_);
     (*lock_requests).erase(it);
   }
 /*
@@ -162,7 +162,7 @@ bool LockManagerB::ReadLock(Txn* txn, const Key& key) {
   unsigned i = 0;
   for (; i < lock_requests->size() && (*lock_requests)[i].mode_ != EXCLUSIVE; i++);
 
-  printf("First exclusive lock found at %d, size is %d\n", i, (int) lock_requests->size());
+  // printf("First exclusive lock found at %d, size is %d\n", i, (int) lock_requests->size());
 
   // If we got to the end without finding it, then the queue contains no
   // exclusive locks so the lock is immediately available. Otherwise, return
