@@ -57,28 +57,21 @@ void LockManagerA::Release(Txn* txn, const Key& key) {
   }
 
   if (it == (*lock_requests).begin()) {
-    // printf("Erasing %p\n", it->txn_);
-    // printf("lock_requests size = %d", (int) lock_requests->size());
     (*lock_requests).erase(it);
 
-    // pushback txn to ready if size > 0 and the next transaction is waiting for no more
+    // Pushback txn to ready if size > 0 and the next transaction is waiting for no more
     // locks
     if (lock_requests->size() > 0) { // need to check for > 0 because begin() could be a old pointer
       Txn* next_txn = lock_requests->begin()->txn_;
       txn_waits_[next_txn]--;
-      // printf("txn_waits[next_txn] = %d\n", txn_waits_[next_txn]);
       if  (txn_waits_[next_txn] == 0) {
-        // printf("Pushing back %p to ready txns\n", next_txn);
         ready_txns_->push_back(next_txn);
       }
     }
   }
   else { // cancelled
-    // printf("Erasing %p\n", it->txn_);
     (*lock_requests).erase(it);
   }
-/*
-  */
 
 }
 
@@ -162,7 +155,6 @@ bool LockManagerB::ReadLock(Txn* txn, const Key& key) {
   unsigned i = 0;
   for (; i < lock_requests->size() && (*lock_requests)[i].mode_ != EXCLUSIVE; i++);
 
-  // printf("First exclusive lock found at %d, size is %d\n", i, (int) lock_requests->size());
 
   // If we got to the end without finding it, then the queue contains no
   // exclusive locks so the lock is immediately available. Otherwise, return
@@ -174,20 +166,6 @@ bool LockManagerB::ReadLock(Txn* txn, const Key& key) {
   return false;
 }
 
-/*
- * 
- *  Loops through the lock_table_[key] queue until it finds the LockRequest with
- *  the corresponding txn.
- *  If the current LockRequest is a Exclusive Lock
- *      Then erase the lockrequest
- *    If the current LockRequest was found at the beginning
- *      decrement the waits on the next batch of requests
- *  If the current LockRequest is a Shared Lock
- *    Erase the LockRequest
- *    If the current LockRequest was found at the beginning and the next one is
- *    an exclusive lock (this was the last shared lock request)
- *      decrement the waits on the next batch of requests
- *
   // Releases lock held by 'txn' on 'key', or cancels any pending request for
   // a lock on 'key' by 'txn'. If 'txn' held an EXCLUSIVE lock on 'key' (or was
   // the sole holder of a SHARED lock on 'key'), then the next request(s) in the
@@ -200,7 +178,6 @@ bool LockManagerB::ReadLock(Txn* txn, const Key& key) {
   // may need to track its lock acquisition progress during the lock request
   // process.
   // (Hint: Use 'LockManager::txn_waits_' defined below.)
-*/
 void LockManagerB::Release(Txn* txn, const Key& key) {
   
   deque<LockRequest>*& lock_requests = lock_table_[key]; 
@@ -220,6 +197,8 @@ void LockManagerB::Release(Txn* txn, const Key& key) {
     DIE("Release called with invalid (txn,key): txn not found in key's entry in locktable");
   }
 
+  // Indicates whether this lock was the lock (whether we can start processing
+  // can start processing the next batch of locks)
   bool lastLock = false;
 
   if (it + 1 < lock_requests->end()) {
@@ -250,7 +229,6 @@ void LockManagerB::Release(Txn* txn, const Key& key) {
       Txn* cur_txn = scan_it->txn_;
       txn_waits_[cur_txn]--;
       if  (txn_waits_[cur_txn] == 0) {
-        // printf("Pushing back %p to ready txns\n", cur_txn);
         ready_txns_->push_back(cur_txn);
       }
     }
@@ -260,7 +238,6 @@ void LockManagerB::Release(Txn* txn, const Key& key) {
       Txn* cur_txn = scan_it->txn_;
       txn_waits_[cur_txn]--;
       if  (txn_waits_[cur_txn] == 0) {
-        // printf("Pushing back %p to ready txns\n", cur_txn);
         ready_txns_->push_back(cur_txn);
       }
     }

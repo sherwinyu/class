@@ -23,26 +23,25 @@ double Storage::Timestamp(Key key) {
 typedef vector<uint64> row;
 
 
-/*
-A tuple is visible to Xaction with ID XID if:
-Xmin must satisfy ALL of the following:
-  pg_log says it is committed
-  < XID (why?)
-  Not in process at start of curr Xaction
-Xmax must satisfy ONE of the following:
-  Is blank or aborted
-  Is > XID 
-  Was in process at start of curr Xaction
-*/
 
 // Read the latest VISIBLE record version associated with 'key'. If a visible
 // version exists, sets '*result' equal to the value and returns true,
 // otherwise returns false.
+// 
+// A tuple is visible to Xaction with ID XID if:
+// Xmin must satisfy ALL of the following:
+//   pg_log says it is committed
+//   < XID (why?)
+//   Not in process at start of curr Xaction
+// Xmax must satisfy ONE of the following:
+//   Is blank or aborted
+//   Is > XID 
+//   Was in process at start of curr Xaction
+// 
 bool MVStorage::Read(Key key, Value* result, uint64 mvcc_txn_id,
                      const map<uint64, TxnStatus>& pg_log_snapshot) {
 
   vector<row>& rows = data_[key];
-  // printf("%p size: %d\n", &rows, (int) rows.size());
 
   if (rows.size() == 0) {
     return false;
@@ -81,7 +80,6 @@ bool MVStorage::Read(Key key, Value* result, uint64 mvcc_txn_id,
       found = true;
       break;
     }
-    printf("row #%d. has 3 tuples: %d\n", (int) (r-rows.begin()),(int) r->size());
   }
 
 //
@@ -92,13 +90,10 @@ bool MVStorage::Read(Key key, Value* result, uint64 mvcc_txn_id,
     DIE ("problem. Should have found something but didn't.");
   *result = visible_tuple->at(2);
   return true;
-  // printf("%ld\t%ld\t%ld\n", data_[key][0], data_[key][1], data_[key][2]);
 }
 
   // Insert a new record version (key, value), according to the postgreSQL-style
   // MVCC scheme.
-  // 
-  //
 void MVStorage::Write(Key key, Value value, uint64 mvcc_txn_id,
     const map<uint64, TxnStatus>& pg_log_snapshot) {
   vector<row>& rows = data_[key];
@@ -146,4 +141,3 @@ void MVStorage::Write(Key key, Value value, uint64 mvcc_txn_id,
 
   rows.push_back(new_tuple);
 }
-

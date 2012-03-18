@@ -1,0 +1,197 @@
+1) Carpe datum.
+
+                         Average Transaction Duration
+                0.1ms           1ms             10ms            100ms
+Read only
+ Serial         5702.44         925.738         98.7432         9.90072
+ Locking A      73343.9         40778.9         4637.22         416.765
+ Locking B      76262.7         81342.2         9590.89         933.004
+ OCC            76727.2         85005.7         9613.44         938.746
+ MVCC           62851.5         59005.4         9573.26         937.084
+1% contention
+ Serial         5451.36         914.988         99.0632         10.1043
+ Locking A      36897.2         11622.3         1183.7          126.917
+ Locking B      36929.7         14461.2         1557.07         148.596
+ OCC            36540.3         34525.7         3975.25         319.453
+ MVCC           18238.9         15276.8         4507.1          359.79
+10% contention
+ Serial         5450.45         923.087         99.2994         9.95124
+ Locking A      9492.6          2034.86         222.526         22.4028
+ Locking B      11068.6         2416.11         273.793         26.6433
+ OCC            18815.6         8969.27         989.126         88.0858
+ MVCC           7801.03         4536.81         619.205         65.0463
+65% contention
+ Serial         5445.99         922.281         99.2036         9.90026
+ Locking A      4438.34         890.314         100.487         10.0191
+ Locking B      4409.16         907.264         100.562         10.2238
+ OCC            3191.17         1722.33         182.915         17.3507
+ MVCC           2582.22         1103.77         131.439         14.6809
+100% contention
+ Serial         5423.33         910.258         99.4663         9.94565
+ Locking A      4807.67         907.186         99.0785         9.9847
+ Locking B      4764.44         902.222         99.3368         9.91577
+ OCC            2587.54         931.438         100.083         9.92685
+ MVCC           972.333         603.63          97.44           10.0677
+High contention mixed read/write
+ Serial         10332.4         5584.81         819.46          76.4389
+ Locking A      10650.9         5203.32         802.774         92.9582
+ Locking B      10472.6         5838.7          1007.69         122.411
+ OCC            6346.26         8529.41         2377.02         853.326
+ MVCC           3225.26         3302.39         3141.31         2738.54
+
+2) Simulations are doomed to succeed.
+
+Transaction durations are accomplished simply by forcing the thread executing
+each transaction to sleep for approximately the amount of time specified. Why is
+this a good approximation of transaction costs in real systems? What problems
+are there with the approximation?
+
+In real systems actual cost of running the transaction is low because of
+multicore/multiprocessor/multiple threads. Once the transaction starts running,
+it merely needs to continue running and will not interfere with any other
+transaction. Because the actual calculations for a transaction run independent
+of the database concurrency / locking scheme, they can be approximated by simply
+sleeping for a duration. The real bottleneck is in dealing with locking /
+validation, when race conditions on the database are possible.
+
+There are some drawbacks with this simulation. First, not all transactions will
+take exactly the same amount of time -- more realistically we should sample from
+a distribution. Furthermore, simulating with sleep precludes the possibility of
+a transaction hanging / stalling forever. In such a case, for sample, the serial
+server will be completely stuck.
+
+3) Adventures in contention.
+
+Tests labeled 'n% contention' signify that any pair of transactions will have a
+write-write conflict with n% probability. (Read-write conflicts will occur with
+higher probability yet.) In the 'High contention mixed read/write' case, 10% of
+transactions are READ-ONLY and run for the transaction duration listed. The rest
+are very fast (< 0.1ms) 65% contention updates.
+
+At any given time, 100 transactions may be actively running in the system.
+
+When all transactions are read-only, they can all execute simultaneously (except
+in the Serial and Locking A cases)---assuming there's plenty of CPU/disk/memory
+resources to go around and we're ONLY limited by contention. So if all
+transactions take exactly 'd' seconds to execute, the maximum total throughput
+you could expect to get is 100/d.
+
+When all transactions attempt to modify the same record (100% contention), it is
+impossible to do any better than serial execution, so you'd expect a maximum
+total throughput of 1/d.
+
+Using a typical pessimistic (locking) concurrency control scheme, what maximum
+total throughput would you expect to get given 10% contention? How about with
+65% contention? (You may ignore read-write conflicts.) Provide and explain all
+your calculations.
+
+Given:
+  n threads
+  d thread seconds / task
+  1 second run time
+
+  at 10% contention:
+    Effectively only 90% of our threads are running
+      .9 * 100 threads / (d thread seconds / task) * 1 second run duration 
+      = ~90/d throughput
+  at 65% contention:
+    Effectively only 35% of our threads are running
+      .9 * 100 threads / (d thread seconds / task) * 1 second run duration 
+      = ~35/d throughput
+
+ 4) The glass is half empty.
+
+ Which of the locking schemes that you implemented performs better, Locking A or
+ Locking B? Why? When is this most apparent? Can you think of a scenario in
+ which you might see the opposite effect?
+
+ //TODO(syu):
+ Neither of these locking schemes is very similar to standard two-phase locking.
+ What advantages does Locking B have over two-phase locking? What disadvantages
+ does it have?
+
+ Locking B performs better than Locking A overall because it doesn't use
+ exclusive locks for reads. This is most apparent in the Read Only runs, when
+ Locking B has about double the throughput of Locking A. I don't think you will
+ have cases where Locking A outperforms Locking B by 100%, though it is possible
+ for Locking A to be slightly better in 100% contention cases because of the
+ overhead of implementing both shared and exclusive locks in Locking B (compared
+ to the straightforward exclusive locks only strategy for A).
+
+ 5) The glass is half full.
+
+ How does OCC perform compared to other schemes? How does this compare to any
+ expectations you had when you started implementing OCC? In a 'real' system that
+ implemented fancy schmancy features like disk reads, indexes, query planners,
+ buffer pools, logging, etc., do you think OCC would compare with Locking/MVCC
+ similarly to how it does in this toy system?
+
+ OCC performed well compared to others. It had higher throughput than either
+ locking scheme and MVCC in most of the benchmarks. It is outperformed by MVCC
+ in the high contention read/write at longer durations. This is because as the
+ transaction durations increase, a greater portion of read transactions will be
+ invalidated (because there is a higher chance one of the write transactions
+ will invalidate a read transaction), which will require rollingback for OCC.
+ Indeed, MVCC performance is more or less constant in this case because write
+ transactions are fast, and reads pass through.
+
+ To implement parallel-validation OCC (for a smaller critical section), changes
+ must be made during validation. We need to keep atomically track of what
+ transactions are in progress at any time to create a copy of the active set at
+ the start of validation for each transaction. This will allow us to slim our
+ critical section considerably. I expect parallel-validation OCC will perform
+ better mostly in scenarios with a small transaction duration. This is because
+ there's more likely to be a bottleneck at serial validation (long CS) when there
+ many quick transactions all needing to be validated. When this isn't the case,
+ it could be possible that the actual cost (in thread time used) for restarting
+ transactions that are invalid is much greater than the cost of validating
+ transactions, which would lessen the speedup of parallel validation.
+
+ 6) Extra version olive oil.
+
+ It is okay to remove committed transactions from the pg_log because it doesn't
+ affect our tuple visibility check: a transaction not being in pg_log can either
+ mean the transaction has already been committed or it has not happened yet.
+ However, the only time we check for somethign in pg_log being completed is when
+ checking Xmin for tuple visibility. But the Xmin of a transaction is the xid of
+ the transaction that created that tuple, and for that transaction to have
+ created the tuple, the transaction must have started already. So removing
+ committed transactions from pg_log is unambiguous. The advantage is that the
+ pg_log is smaller so it is faster to snapshot / iterate over.
+
+ Consider the following example. There are two tuples, A and B. At all times,
+ A+B >= 0 must hold.  Transaction 1 initializes both of them to 100. Say
+ Transaction 2 and 3 arrive concurrently: they both read values of A and B, and
+ then respectively subtract 100 from A and from B. If this were serializable,
+ then either 2 would come occur first (resulting in A: -100, B: 100, A+B == 0)
+ and 3 would attempt to subtract from B and abort, or vice versa. 
+
+ However, in our implementation of MVCC, the following can happen. 2 and 3
+ arrive simultaneously and acquire respective exclusive locks on A and B. They
+ both read in the values of A and B (by finding the visible record, which was
+ created by transaction 1). They then both do their own computations on their
+ own versions. 2 sees -100 + 100 == 0 and 3 sees 100 + -100 == 0 so both
+ transactions think their computations are valid. They then both apply their
+ writes, updating both A and B to expire the record created by 1. We end up with
+ A = -100, B = -100, which should be an invalid state -- this is not equivalent
+ to either serial execution (2 then 3 would result in A=-100, B=100; 3 then 2
+ would result in A=100, B=-100).
+
+ MVCC's primary advantage is that reads never block -- read only transactions
+ will always go through. This is particularly evident in the high contention
+ read write scenario, where MVCC outperforms every other locking scheme
+ considerably at higher read transaction durations. The locking schemes (A & B)
+ lose throughput because a high percentage of transactaions are writes
+ (exclusive locking); OCC loses throughput because many read-only transactions
+ are eventually invalidated. Modifying Locking and OCC to have this advantage
+ ultimately comes down to building something similar to a multiversion control
+ datastructure -- for reads to always go through, there must always be a
+ readable version of that record available.  Another (bad) way to do this with
+ OCC is use ONLY shared-locks -- when a transaction starts, it acquires
+ necesssary shared read-only locks. Then, during validation, we can be sure
+ read-only transactions go through because the locks prevented invalidation from
+ writes. Unfortunately, this is a terrible idea for a variety of reasons. First,
+ it's basically a bad version of MVCC and loses the benefits of OCC. Second,
+ it's possible that write operations get blocked forever. 
+
+

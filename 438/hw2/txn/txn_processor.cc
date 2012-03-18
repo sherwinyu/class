@@ -1,4 +1,4 @@
-// Author: Alexander Thomson (thomson@cs.yale.edu)
+// Authors: Alexander Thomson (thomson@cs.yale.edu), Sherwin Yu (sherwin.yu@yale.edu)
 
 #include "txn/txn_processor.h"
 
@@ -85,8 +85,6 @@ void TxnProcessor::RunLockingScheduler() {
   while (tp_.Active()) {
     // Start processing the next incoming transaction request.
     if (txn_requests_.Pop(&txn)) {
-      //printf("RLS: txn_requests.size %d\n", txn_requests_.Size());
-      //printf("RLS processing new txn: %p, id: %ld\n",  txn, txn->unique_id_);
       int blocked = 0;
 
       // Request read locks.
@@ -158,10 +156,7 @@ void TxnProcessor::RunOCCScheduler() {
   Txn* txn;
   while (tp_.Active()) {
     // Get the next new transaction request (if one is pending) and start it running.
-    // printf("while true");
     if (txn_requests_.Pop(&txn)) {
-      // printf("txn_requests.size %d\n", txn_requests_.Size());
-      // printf("processing new txn: %p, id: %ld; txnreqs_size=%d\n",  txn, txn->unique_id_, txn_requests_.Size());
       txn->occ_start_time_ = GetTime();
       tp_.RunTask(new Method<TxnProcessor, void, Txn*>(
             this,
@@ -187,10 +182,10 @@ void TxnProcessor::RunOCCScheduler() {
       set<Key>::iterator it;
   
       // Check both read/write sets and invalidate if existing record is newer
-      for (it = txn->readset_.begin(); it != txn->readset_.end(); it++ )
+      for (it = txn->readset_.begin(); it != txn->readset_.end(); it++)
         if  (storage_.Timestamp(*it) > txn->occ_start_time_)
           valid = false;
-      for (it = txn->writeset_.begin(); it != txn->writeset_.end(); it++ )
+      for (it = txn->writeset_.begin(); it != txn->writeset_.end(); it++)
         if (storage_.Timestamp(*it) > txn->occ_start_time_)
           valid = false;
 
