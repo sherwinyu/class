@@ -1,5 +1,7 @@
 1) Carpe datum.
 
+
+
                          Average Transaction Duration
                 0.1ms           1ms             10ms            100ms
 Read only

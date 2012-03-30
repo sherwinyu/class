@@ -1,0 +1,47 @@
+Related files: Node.java, TCPManager.java,
+TCPSock.java
+
+with 10% contention, 
+Where to put your code
+Under directory proj/
+Related files: Node.java, TCPManager.java,
+TCPSock.java
+Do NOT modify files under lib/
+E.g., the file ‘Transport.java’ only serves
+as definition of transport packet format, do
+not rewrite it
+send(int destAddr, Packet packet)
+Call this method to send a packet you have
+constructed to a node with destAddr
+  How do I know the destination’s
+  address?
+  Fishnet assign the lowest unused address (0-254)
+  to a newly started node
+  If you start two fish nodes, they will have address
+  0 and 1
+Node.java
+  onCommand(String command)
+  entry point for node commands, process
+  commands here
+  Example: 0 hello
+  Node 0’s onCommand gets invoked with
+command = “hello”
+Node.java
+  onReceive(Integer from, byte[] msg)
+  Entry point for receiving a packet
+  However, put your support for new protocols in
+  receivePacket(int from, Packet packet)
+  receivePacket(int from, Packet packet)
+
+Call your protocol specific packet processing code
+from this method
+Node.java
+addTimer
+An example of how to use callbacks and
+timers
+ You may need to implement more
+sophisticated versions of it, since the
+current one only adds callbacks with no
+arguments
+
+
