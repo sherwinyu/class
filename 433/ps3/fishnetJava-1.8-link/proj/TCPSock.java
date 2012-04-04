@@ -23,6 +23,8 @@ public class TCPSock {
   }
   private State state;
 
+  private int backlog;
+
   public TCPSock() {
   }
 

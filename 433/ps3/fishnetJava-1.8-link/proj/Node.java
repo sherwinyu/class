@@ -191,8 +191,9 @@ public class Node {
     logError("Unexpected Ping Reply from " + packet.getSrc() + ": " + payload);
   }
 
+//TODO(syu): implement this
   void receiveTransport(Packet packet) {
-    packet.getPayload()
+    packet.getPayload();
     
   }
 
@@ -312,7 +313,7 @@ public class Node {
     //     workint: execution interval of the transfer worker, default 1 second
     //     sz: buffer size of the transfer worker, default 65536
     String[] args = command.split(" ");
-    if (args.length < 3 || args.length > 6 || !args[0].equalshttp://www.youtube.com/watch?v=2sZHbjipQGE("server")) {
+    if (args.length < 3 || args.length > 6 || !args[0].equals("server")) {
       return false;
     }
 
