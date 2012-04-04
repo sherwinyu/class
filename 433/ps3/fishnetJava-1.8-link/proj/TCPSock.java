@@ -1,7 +1,7 @@
 /**
  * <p>Title: CPSC 433/533 Programming Assignment</p>
  *
- * <p>Description: Fishnet socket implementation</p>
+  * <p>Description: Fishnet socket implementation</p>
  *
  * <p>Copyright: Copyright (c) 2006</p>
  *
@@ -47,7 +47,11 @@ public class TCPSock {
    * @return int 0 on success, -1 otherwise
    */
   public int listen(int backlog) {
-    return -1;
+    this.backlog = backlog;
+    this.state = State.LISTEN;
+    return 0;
+
+    //return -1;
   }
 
   /**

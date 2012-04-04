@@ -62,7 +62,7 @@ public class Node {
 
   /**
    * Called by the manager when a packet has arrived for this node
-   * @param from The address of the node that has sent this packet
+   * @paramkfrom The address of the node that has sent this packet
    * @param msg The serialized form of the packet.
    */
   public void onReceive(Integer from, byte[] msg) {
@@ -150,6 +150,10 @@ public class Node {
         this.receivePingReply(packet);
         break;
 
+      case Protocol.TRANSPORT_PKT:
+        this.receiveTransport(packet);
+        break;
+
       default:
         logError("Packet with unknown protocol received. Protocol: " + packet.getProtocol());
     }
@@ -185,6 +189,11 @@ public class Node {
       }
     }
     logError("Unexpected Ping Reply from " + packet.getSrc() + ": " + payload);
+  }
+
+  void receiveTransport(Packet packet) {
+    packet.getPayload()
+    
   }
 
   private void send(int destAddr, Packet packet) {
@@ -303,7 +312,7 @@ public class Node {
     //     workint: execution interval of the transfer worker, default 1 second
     //     sz: buffer size of the transfer worker, default 65536
     String[] args = command.split(" ");
-    if (args.length < 3 || args.length > 6 || !args[0].equals("server")) {
+    if (args.length < 3 || args.length > 6 || !args[0].equalshttp://www.youtube.com/watch?v=2sZHbjipQGE("server")) {
       return false;
     }
 

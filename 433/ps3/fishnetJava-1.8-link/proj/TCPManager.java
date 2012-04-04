@@ -41,7 +41,8 @@ public class TCPManager {
    *                 a local port
    */
   public TCPSock socket() {
-    return null;
+    // return null;
+    return new TCPSock();
   }
 
   /*
