@@ -79,12 +79,85 @@ public class TCPManager implements Debuggable {
     // add(new TCPSockID(addr, -1, sock.getLocalPort(), -1), sock);
   }
 
+  // tsid is a a properly oriented tsid wrt this socket.
+
+  /**
+   *  handled an incoming SYN packet. 
+   *  
+   *  @param tsid Tuple oriented relative to local sockets
+   *  @param t Transport packet containing some information.
+   *
+   *  1) look up corresponding welcome socket
+   *  2) add appropriate receiving socket to queue, with 4tuple set
+   */
+  public void sendACK(TCPSockID tsid) {
+    send(tsid, Transport.ACK, new byte[]{});
+  }
+
+  public void send(TCPSockID tsid, int type, byte[] payload) { 
+    send(tsid, type, sockSpace.get(tsid).getTransportSeqNum(), payload);
+  } 
+
+  public void send(TCPSockID tsid, int type, int seqNum, byte[] payload) {
+    Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
+    Packet p = new Packet(tsid.getRemoteAddr(), this.getAddr(), ttl(), Protocol.TRANSPORT_PKT, getPacketSeqNum(), t.pack());
+    node.send(tsid.getRemoteAddr(), p);
+   }
+
+  public int window() {
+    return 3;
+  }
+  public int ttl() {
+    return 1000;
+  }
+  
+
+  /**
+   * Handle an incoming SYN
+   * @param tsid TSID oriented relative to local sockets
+   * @param t is this necessary? TODO(syu)
+   *
+   * Check if incoming SYN matches a welcome socket
+   * if so, create new recvSock
+   * add recvSock to queue of the welcomeSock
+   */
+  public void handleSYN(TCPSockID tsid, Transport t) {
+    if (welcomeSocks.containsKey(tsid.getLocalPort())) {
+      p(this, 3, "local welcome port matched!");
+      TCPSock sock = welcomeSocks.get(tsid.getLocalPort());
+      TCPSock recvSock = socket(SocketType.RECEIVER);
+      recvSock.setTSID(tsid);
+      sock.addRecievingSock(recvSock);
+    }
+    else
+      p(this, 3, "rejecting SYN");
+  }
+
+  public void handleACK(TCPSockID tsid) {
+    TCPSock sock = getSockByTSID(tsid);
+    aa(this, sock.getSockType() == SocketType.SENDER, "ack received by non sender socket");
+    aa(this, sock.isConnectionPending() || sock.isConnected(), "ack received by invalid socket state");
+
+    if (sock.isConnectionPending()) {
+      sock.synAckReceived();
+    }
+
+    if (sock.isConnectionPending()) {
+      sock.synAckReceived();
+    }
+    
+  }
+
   /*
    * End Socket API
    */
 
   public int getAddr() {
     return this.node.getAddr();
+  }
+  
+  public TCPSock getSockByTSID(TCPSockID tsid) {
+    return sockSpace.get(tsid);
   }
 
   //TODO(syu): implement this

@@ -1,3 +1,5 @@
+import java.util.*;
+
 import syu.*;
 import static syu.SU.*;
 /**
@@ -20,7 +22,7 @@ enum SocketType {
 }
 public class TCPSock implements Debuggable {
   public String id() {
-    return tcpMan.node.id() + "_TCPSock" + sockType +" " + localPort;
+    return tcpMan.node.id() + "_TCPSock" + sockType +" " + getLocalPort();
   }
   // TCP socket states
   enum State {
@@ -37,15 +39,22 @@ public class TCPSock implements Debuggable {
   private SocketType sockType;
 
   private TCPManager tcpMan;
+  private TCPSockID tsid;
 
   private int backlog;
-  private int localPort;
-  int seqNum;
+  private ArrayList<TCPSock> welcomeQueue;
+  private int seqNum;
 
   public TCPSock(TCPManager tcpMan, SocketType type) {
     this.tcpMan = tcpMan;
+    this.tsid = new TCPSockID();
+    this.tsid.localAddr = tcpMan.getAddr();
     this.state = State.CLOSED;
     this.sockType = type;
+
+    this.seqNum = 555;
+
+    this.welcomeQueue = null;
     this.backlog = -1;
   }
 
@@ -63,7 +72,7 @@ public class TCPSock implements Debuggable {
   public int bind(int localPort) {
     // TODO(syu): check if local port in use
     if (tcpMan.isPortFree(localPort)) {
-      this.localPort = localPort;
+      this.tsid.localPort = localPort;
       return 0;
     }
     return -1;
@@ -77,11 +86,12 @@ public class TCPSock implements Debuggable {
   public int listen(int backlog) {
 
     if (sockType != SocketType.WELCOME) {
-      pe(this, "not a welcome socket");
+      die(this, "not a welcome socket");
       return -1;
     }
 
     this.backlog = backlog;
+    welcomeQueue = new ArrayList<TCPSock>(backlog);
     this.state = State.LISTEN;
     tcpMan.addWelcomeSocket(this);
     return 0;
@@ -91,10 +101,25 @@ public class TCPSock implements Debuggable {
   /**
    * Accept a connection on a socket
    *
+   * Needs to trigger sending an ACK
+   *
    * @return TCPSock The first established connection on the request queue
+   * remove from welcomeQueue
+   * adds recvSocket to socketSpace
+   * sends Ack
    */
   public TCPSock accept() {
-    return null;
+    aa(this, this.sockType == SocketType.WELCOME, "accept() called by non-welcome socket");
+    aa(this, this.state == State.LISTEN, "accept() called when not listening");
+
+    if (welcomeQueue.isEmpty())
+      return null;
+
+    TCPSock recvSock = welcomeQueue.remove(0);
+    tcpMan.add(recvSock.tsid, recvSock);
+    tcpMan.sendACK(tsid);
+
+    return recvSock;
   }
 
   public boolean isConnectionPending() {
@@ -130,7 +155,7 @@ public class TCPSock implements Debuggable {
     // TODO(syu): how to choose window size and ttl?
     int window = 555;
     int ttl = 555;
-    Transport t = new Transport(this.localPort, destPort, Transport.SYN, window, this.seqNum, new byte[]{});
+    Transport t = new Transport(getLocalPort(), destPort, Transport.SYN, window, this.seqNum, new byte[]{});
     Packet p = new Packet(destAddr, tcpMan.getAddr(), ttl, Protocol.TRANSPORT_PKT, tcpMan.getPacketSeqNum(), t.pack());
     tcpMan.node.send(destAddr, p);
 
@@ -181,12 +206,43 @@ public class TCPSock implements Debuggable {
     return -1;
   }
 
+  public void addRecievingSock(TCPSock recvSock) {
+    aa(this, this.sockType == SocketType.WELCOME, "non-welcome socket adding to queue");
+    welcomeQueue.add(recvSock);
+  }
+  /*
+   * Precondition: current state is 
+   */
+  public void synAckReceived() {
+    aa(this, isConnectionPending(), "synAckReceived by invalid state");
+    this.state = State.ESTABLISHED;
+  }
+
+  public void setTSID(TCPSockID tsid) {
+    this.tsid = tsid;
+  }
+  public TCPSockID getTSID() {
+    return this.tsid;
+  }
   public int getLocalPort() {
-    return this.localPort;
+    return this.tsid.getLocalPort();
+  }
+  public int getRemotePort() {
+    return this.tsid.getRemotePort();
+  }
+  public int getLocalAddr() {
+    return this.tsid.getLocalAddr();
+  }
+  public int getRemoteAddr() {
+    return this.tsid.getRemoteAddr();
   }
 
   public SocketType getSockType() {
     return this.sockType;
+  }
+
+  public int getTransportSeqNum() {
+    return this.seqNum++;
   }
 
   public TCPManager getTCPManager() {

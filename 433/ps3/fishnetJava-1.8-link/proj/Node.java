@@ -201,6 +201,18 @@ public class Node implements Debuggable {
 //TODO(syu): implement this
   void receiveTransport(Packet p) {
     TCPSockID tsid = TCPSockID.fromIncomingPacket(p);
+    Transport t = Transport.unpack(p.getPayload());
+
+    if (t.getType() == Transport.SYN) {
+      p(this, "SYN matched");
+      tcpMan.handleSYN(tsid, t);
+    }
+
+    if (t.getType() == Transport.ACK) {
+      p(this, "ACK matched");
+      tcpMan.handleACK(tsid);
+    }
+      
 /*
     TCPSockID tsid = new TCPSockID(p);
     if (this.tcpMan.connectionExists(tsid)) {
@@ -231,7 +243,6 @@ public class Node implements Debuggable {
     try {
       Method method = Callback.getMethod(methodName, this, null);
       Callback cb = new Callback(method, this, null);
-      this.manager.addTimer(this.addr, deltaT, cb);
     }catch(Exception e) {
       logError("Failed to add timer callback. Method Name: " + methodName +
           "\nException: " + e);
