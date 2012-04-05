@@ -25,6 +25,7 @@ public class TCPManager implements Debuggable {
 
   private static final byte dummy[] = new byte[0];
   HashMap<TCPSockID, TCPSock> sockSpace;
+  HashMap<Integer, TCPSock> welcomeSocks;
 
   public TCPManager(Node node, int addr, Manager manager) {
     this.node = node;
@@ -33,6 +34,7 @@ public class TCPManager implements Debuggable {
 
     this.manager = manager;
     this.sockSpace = new HashMap<TCPSockID, TCPSock>();
+    this.welcomeSocks = new HashMap<Integer, TCPSock>();
   }
 
   // public send
@@ -73,7 +75,8 @@ public class TCPManager implements Debuggable {
       die(this, "adding socket that isn't owned by me");
     if (sock.getSockType() != SocketType.WELCOME) 
       die(this, "adding non-welcome socket");
-    add(new TCPSockID(addr, -1, sock.getLocalPort(), -1), sock);
+    welcomeSocks.put(sock.getLocalPort(), sock);
+    // add(new TCPSockID(addr, -1, sock.getLocalPort(), -1), sock);
   }
 
   /*
