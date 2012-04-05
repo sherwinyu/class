@@ -90,11 +90,20 @@ public class TCPManager implements Debuggable {
    *  1) look up corresponding welcome socket
    *  2) add appropriate receiving socket to queue, with 4tuple set
    */
+  public void sendSYN(TCPSockID tsid) {
+    p(this, "sending SYN " + tsid.id());
+    send(tsid, Transport.SYN, new byte[]{});
+  }
   public void sendACK(TCPSockID tsid) {
+    p(this, "sending ACK " + tsid.id());
     send(tsid, Transport.ACK, new byte[]{});
   }
 
   public void send(TCPSockID tsid, int type, byte[] payload) { 
+    // p(tsid, "is...?");
+     ppp("\nkeys:");
+     ppp("" + sockSpace.keySet());
+    aa(this, sockSpace.containsKey(tsid), "attempting to send with nonexistent tsid");
     send(tsid, type, sockSpace.get(tsid).getTransportSeqNum(), payload);
   } 
 
@@ -108,7 +117,7 @@ public class TCPManager implements Debuggable {
     return 3;
   }
   public int ttl() {
-    return 1000;
+    return 4;
   }
   
 

@@ -117,7 +117,7 @@ public class TCPSock implements Debuggable {
 
     TCPSock recvSock = welcomeQueue.remove(0);
     tcpMan.add(recvSock.tsid, recvSock);
-    tcpMan.sendACK(tsid);
+    tcpMan.sendACK(recvSock.tsid);
 
     return recvSock;
   }
@@ -151,18 +151,20 @@ public class TCPSock implements Debuggable {
       pe(this, " connect() called on inappropriated");
       return -1;
     }
+    this.tsid.remoteAddr = destAddr;
+    this.tsid.remotePort = destPort;
 
-    // TODO(syu): how to choose window size and ttl?
-    int window = 555;
-    int ttl = 555;
-    Transport t = new Transport(getLocalPort(), destPort, Transport.SYN, window, this.seqNum, new byte[]{});
-    Packet p = new Packet(destAddr, tcpMan.getAddr(), ttl, Protocol.TRANSPORT_PKT, tcpMan.getPacketSeqNum(), t.pack());
-    tcpMan.node.send(destAddr, p);
-
+    tcpMan.add(this.tsid, this);
+    tcpMan.sendSYN(this.tsid);
     this.state = State.SYN_SENT;
-    tcpMan.add(TCPSockID.fromPacket(p), this);
 
     return 0;
+    // int window = 5;
+    // int ttl = 5;
+    // Transport t = new Transport(getLocalPort(), destPort, Transport.SYN, window, this.seqNum, new byte[]{});
+    // Packet p = new Packet(destAddr, tcpMan.getAddr(), ttl, Protocol.TRANSPORT_PKT, tcpMan.getPacketSeqNum(), t.pack());
+    // tcpMan.node.send(destAddr, p);
+
 
   }
 

@@ -6,7 +6,7 @@ main();
 
 sub main {
     
-    $classpath = "lib/:proj/";
+    $classpath = "out/";
     
     $fishnetArgs = join " ", @ARGV;
 

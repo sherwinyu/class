@@ -74,7 +74,7 @@ public class Node implements Debuggable {
    */
   public void onReceive(Integer from, byte[] msg) {
     Packet packet = Packet.unpack(msg);
-    //logOutput("received packet from " + from);
+
     if(packet == null) {
       logError("Unable to unpack message: " + Utility.byteArrayToString(msg) + " Received from " + from);
       return;
@@ -201,15 +201,16 @@ public class Node implements Debuggable {
 //TODO(syu): implement this
   void receiveTransport(Packet p) {
     TCPSockID tsid = TCPSockID.fromIncomingPacket(p);
+    p(this, "received incoming (oriented locally) tsid: " + tsid.id());
     Transport t = Transport.unpack(p.getPayload());
 
     if (t.getType() == Transport.SYN) {
-      p(this, "SYN matched");
+      p(this, 3, "SYN matched");
       tcpMan.handleSYN(tsid, t);
     }
 
     if (t.getType() == Transport.ACK) {
-      p(this, "ACK matched");
+      p(this, 3, "ACK matched");
       tcpMan.handleACK(tsid);
     }
       
@@ -243,10 +244,23 @@ public class Node implements Debuggable {
     try {
       Method method = Callback.getMethod(methodName, this, null);
       Callback cb = new Callback(method, this, null);
+      this.manager.addTimer(this.addr, deltaT, cb);
     }catch(Exception e) {
       logError("Failed to add timer callback. Method Name: " + methodName +
           "\nException: " + e);
     }
+  }
+
+  private void addTcpManTimer(long deltaT, String methodName, String[] paramTypes, Object[] params) {
+    try {
+      Method method = Callback.getMethod(methodName, tcpMan, paramTypes);
+      Callback cb = new Callback(method, tcpMan, params);
+      this.manager.addTimer(this.addr, deltaT, cb);
+    } catch (Exception e) {
+      p("Failed to addTimer");
+      e.printStackTrace();
+    }
+    
   }
 
   // Fishnet reliable data transfer
@@ -326,6 +340,7 @@ public class Node implements Debuggable {
       return true;
     } catch (Exception e) {
       logError("Exception: " + e);
+      e.printStackTrace();
     }
 
     return false;

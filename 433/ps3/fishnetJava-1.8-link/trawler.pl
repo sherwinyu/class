@@ -6,7 +6,8 @@ main();
 
 sub main {
     
-    $classpath = "lib/";
+    $classpath = "out/";
+    # $classpath = "lib/";
     
     $fishnetArgs = join " ", @ARGV;
 
