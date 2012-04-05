@@ -1,7 +1,9 @@
+import syu.*;
+import static syu.SU.*;
 /**
  * <p>Title: CPSC 433/533 Programming Assignment</p>
  *
-  * <p>Description: Fishnet socket implementation</p>
+ * <p>Description: Fishnet socket implementation</p>
  *
  * <p>Copyright: Copyright (c) 2006</p>
  *
@@ -11,7 +13,15 @@
  * @version 1.0
  */
 
-public class TCPSock {
+enum SocketType {
+  WELCOME,
+  SENDER,
+  RECEIVER
+}
+public class TCPSock implements Debuggable {
+  public String id() {
+    return tcpMan.node.id() + "_TCPSock" + sockType +" " + localPort;
+  }
   // TCP socket states
   enum State {
     // protocol states
@@ -21,11 +31,22 @@ public class TCPSock {
     ESTABLISHED,
     SHUTDOWN // close requested, FIN not sent (due to unsent data in queue)
   }
+
+
   private State state;
+  private SocketType sockType;
+
+  private TCPManager tcpMan;
 
   private int backlog;
+  private int localPort;
+  int seqNum;
 
-  public TCPSock() {
+  public TCPSock(TCPManager tcpMan, SocketType type) {
+    this.tcpMan = tcpMan;
+    this.state = State.CLOSED;
+    this.sockType = type;
+    this.backlog = -1;
   }
 
   /*
@@ -40,6 +61,11 @@ public class TCPSock {
    * @return int 0 on success, -1 otherwise
    */
   public int bind(int localPort) {
+    // TODO(syu): check if local port in use
+    if (tcpMan.isPortFree(localPort)) {
+      this.localPort = localPort;
+      return 0;
+    }
     return -1;
   }
 
@@ -49,11 +75,17 @@ public class TCPSock {
    * @return int 0 on success, -1 otherwise
    */
   public int listen(int backlog) {
+
+    if (sockType != SocketType.WELCOME) {
+      pe(this, "not a welcome socket");
+      return -1;
+    }
+
     this.backlog = backlog;
     this.state = State.LISTEN;
+    tcpMan.addWelcomeSocket(this);
     return 0;
 
-    //return -1;
   }
 
   /**
@@ -89,7 +121,24 @@ public class TCPSock {
    * @return int 0 on success, -1 otherwise
    */
   public int connect(int destAddr, int destPort) {
-    return -1;
+    // if not starting from a closed state, connect should fail.
+    if (!isClosed() || sockType != SocketType.SENDER) {
+      pe(this, " connect() called on inappropriated");
+      return -1;
+    }
+
+    // TODO(syu): how to choose window size and ttl?
+    int window = 555;
+    int ttl = 555;
+    Transport t = new Transport(this.localPort, destPort, Transport.SYN, window, this.seqNum, new byte[]{});
+    Packet p = new Packet(destAddr, tcpMan.getAddr(), ttl, Protocol.TRANSPORT_PKT, tcpMan.getPacketSeqNum(), t.pack());
+    tcpMan.node.send(destAddr, p);
+
+    this.state = State.SYN_SENT;
+    tcpMan.add(TCPSockID.fromPacket(p), this);
+
+    return 0;
+
   }
 
   /**
@@ -132,6 +181,17 @@ public class TCPSock {
     return -1;
   }
 
+  public int getLocalPort() {
+    return this.localPort;
+  }
+
+  public SocketType getSockType() {
+    return this.sockType;
+  }
+
+  public TCPManager getTCPManager() {
+    return this.tcpMan;
+  }
   /*
    * End of socket API
    */

@@ -3,6 +3,9 @@ import java.util.Iterator;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 
+import syu.*;
+import static syu.SU.*;
+
 /**
  * <pre>
  * Node -- Class defining the data structures and code for the
@@ -23,7 +26,11 @@ import java.lang.reflect.Method;
  * other upcalls can be delivered
  * </pre>
  */
-public class Node {
+public class Node implements Debuggable {
+
+  public String id() {
+    return "Node" + addr;
+  }
   private final long PingTimeout = 10000;  // Timeout pings in 10 seconds
 
   private Manager manager;
@@ -192,12 +199,26 @@ public class Node {
   }
 
 //TODO(syu): implement this
-  void receiveTransport(Packet packet) {
-    packet.getPayload();
-    
+  void receiveTransport(Packet p) {
+    TCPSockID tsid = TCPSockID.fromIncomingPacket(p);
+/*
+    TCPSockID tsid = new TCPSockID(p);
+    if (this.tcpMan.connectionExists(tsid)) {
+      
+    }
+    else if 
+
+    cases:
+      full match, type == data AND state = established AND type == sending
+      tsid.remote matches node, type == syn
+      tsid.match, type == ack AND state = syn sent
+      tsid.match, type == ack AND state = established AND type == sending
+      */
   }
 
-  private void send(int destAddr, Packet packet) {
+
+
+  public void send(int destAddr, Packet packet) {
     try {
       this.manager.sendPkt(this.addr, destAddr, packet.pack());
     }catch(IllegalArgumentException e) {
@@ -283,7 +304,8 @@ public class Node {
         Integer.parseInt(args[6]) :
         TransferClient.DEFAULT_BUFFER_SZ;
 
-      TCPSock sock = this.tcpMan.socket();
+      TCPSock sock = this.tcpMan.socket(SocketType.SENDER);
+      
       sock.bind(localPort);
       sock.connect(destAddr, port);
       TransferClient client = new
@@ -332,7 +354,7 @@ public class Node {
         args.length == 6 ?
         Integer.parseInt(args[5]) :
         TransferServer.DEFAULT_BUFFER_SZ;
-      TCPSock sock = this.tcpMan.socket();
+      TCPSock sock = this.tcpMan.socket(SocketType.WELCOME);
       sock.bind(port);
       sock.listen(backlog);
 
