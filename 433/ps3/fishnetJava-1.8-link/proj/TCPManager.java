@@ -101,19 +101,28 @@ public class TCPManager implements Debuggable {
 
   public void send(TCPSockID tsid, int type, byte[] payload) { 
     // p(tsid, "is...?");
-     ppp("\nkeys:");
-     ppp("" + sockSpace.keySet());
+    ppp("\nkeys:");
+    ppp("" + sockSpace.keySet());
     aa(this, sockSpace.containsKey(tsid), "attempting to send with nonexistent tsid");
     send(tsid, type, sockSpace.get(tsid).getTransportSeqNum(), payload);
   } 
 
   public void send(TCPSockID tsid, int type, int seqNum, byte[] payload) {
-    Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
-    Packet p = new Packet(tsid.getRemoteAddr(), this.getAddr(), ttl(), Protocol.TRANSPORT_PKT, getPacketSeqNum(), t.pack());
+    Packet p = makePacket(tsid, type, seqNum, payload);
     node.send(tsid.getRemoteAddr(), p);
-   }
+  }
 
-  public void send(int remoteAddr, Packet p) {
+  /**
+   * Sends a data packet to remoteAddr.
+   *
+   * @param  remoteAddr destination address of packet
+   * @param lastSeqNum the last transport sequence number of the TCP transport contained in the packet 
+   * @param p the Packet to be delivered to node.send()
+   *
+   * Only delivered if sendBase is less than seqNum, otherwise the to-be-sent packet has already been acked.
+   */
+  public void sendData(int remoteAddr, int lastSeqNum, Packet p) {
+    if sendBase < lastSeqNum
     node.send(remoteAddr, p); 
   }
 
@@ -121,13 +130,15 @@ public class TCPManager implements Debuggable {
     return 3;
   }
 
-  public Packet makePacket(TCPSockID, int type, int seqNum, byte[] payload)
-Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
+  public Packet makePacket(TCPSockID, int type, int seqNum, byte[] payload) {
+    Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
     Packet p = new Packet(tsid.getRemoteAddr(), this.getAddr(), ttl(), Protocol.TRANSPORT_PKT, getPacketSeqNum(), t.pack());
+    return p;
+  }
   public int ttl() {
     return 4;
   }
-  
+
 
   /**
    * Handle an incoming SYN
@@ -162,7 +173,7 @@ Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, win
     if (sock.isConnectionPending()) {
       sock.synAckReceived();
     }
-    
+
   }
 
   /*
@@ -172,7 +183,7 @@ Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, win
   public int getAddr() {
     return this.node.getAddr();
   }
-  
+
   public TCPSock getSockByTSID(TCPSockID tsid) {
     return sockSpace.get(tsid);
   }
