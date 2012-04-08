@@ -1,3 +1,4 @@
+import static syu.SU.*;
 /**
  * <p>Title: CPSC 433/533 Programming Assignment</p>
  *
@@ -17,7 +18,7 @@ public class TransferClient extends FishThread {
     private long interval;
     private byte[] buf;
 
-    public static final long DEFAULT_CLIENT_INTERVAL = 1;
+    public static final long DEFAULT_CLIENT_INTERVAL = 500;
     public static final int DEFAULT_BUFFER_SZ = 65536;
 
     // number of bytes to send
@@ -80,12 +81,10 @@ public class TransferClient extends FishThread {
                 }
             }
 
-            p("pre write");
+            ppp("pre write");
             int len = Math.min(buf.length - index, amount);
-
             int count = sock.write(buf, index, len);
-            p("post write");
-            int len = Math.min(buf.length - index, amount);
+            ppp("post write");
 
             if (count == -1) {
                 // on error, release the socket immediately

@@ -135,7 +135,7 @@ public class TCPManager implements Debuggable {
 
     if (t.getSeqNum() >= sock.getSendBase())  {
       node.sendSegment(tsid.getLocalAddr(), tsid.getRemoteAddr(),
-                       Protocol.TRANSPORT_PKT, t.pack());
+          Protocol.TRANSPORT_PKT, t.pack());
     }
     else 
       p(sock, 3, "packet not sent because ack received: seqNum (" + t.getSeqNum() + ") >= sendBase (" + sock.getSendBase() + ")");
@@ -143,11 +143,18 @@ public class TCPManager implements Debuggable {
 
   public static String bytesToString(byte[] arr) {
     String out = "";
-    for (byte b : arr) {
-      out += (int) b + "";
-    }
+    int preview = 5;
+
+    for (int i = 0; i < Math.min(preview, arr.length); i++)
+      out += (int) arr[i] + " ";
+
+    out += "... ";
+
+    for (int i = 0; i < Math.min(preview, arr.length); i++) 
+      out += (int) arr[arr.length - i - 1] + " ";
     return out;
   }
+
   public static String transportToString(Transport t) {
     return bytesToString(t.getPayload());
   }

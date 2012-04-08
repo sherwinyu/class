@@ -25,6 +25,14 @@ public class TCPSock implements Debuggable {
   public String id() {
     return sockType + "(" + state + "  " + tsid.getLocalAddr() +":" + getLocalPort() + ")";
   }
+  public String dumpState() {
+    String out = "";
+    out += "seqNum: " + seqNum;
+    out += "\t sendBase: " + sendBase;
+    out += "\t recvBase: " + recvBase;
+    out += "\t sendWindow: " + sendWindow;
+    return out;
+  }
   // TCP socket states
   enum State {
     // protocol states
@@ -58,7 +66,11 @@ public class TCPSock implements Debuggable {
   private int backlog;
   private ArrayList<TCPSock> welcomeQueue;
 
-  public TCPSock(TCPManager tcpMan, SocketType type) {
+  public TCPSock (TCPManager tcpMan, SocketType type) {
+    ByteBuffer bb = ByteBuffer.allocate(SEND_BUFFER_SIZE);
+    this(tcpMan, type, bb);
+  }
+  public TCPSock(TCPManager tcpMan, SocketType type, ByteBuffer bb) {
     this.tcpMan = tcpMan;
     this.tsid = new TCPSockID();
     this.tsid.localAddr = tcpMan.getAddr();
@@ -67,7 +79,7 @@ public class TCPSock implements Debuggable {
 
     switch (sockType) {
       case SENDER:
-        initSender();
+        initSender(bb);
         break;
       case RECEIVER:
         initReceiver();
@@ -114,11 +126,11 @@ public class TCPSock implements Debuggable {
    */
   public int bind(int localPort) {
     // TODO(syu): check if local port in use
-    if (tcpMan.isPortFree(localPort)) {
+    // if (tcpMan.isPortFree(localPort)) {
       this.tsid.localPort = localPort;
       return 0;
-    }
-    return -1;
+    // }
+    // return -1;
   }
 
   /**
@@ -240,7 +252,8 @@ public class TCPSock implements Debuggable {
     ppp("outbb size: " + outbb.capacity());
     ppp("outbb limit: " + outbb.limit());
     ppp("outbb remaining: " + outbb.remaining());
-    return 0;
+    ppp("write called:\n\t buf = " + TCPManager.bytesToString(buf));
+    // if (true) return 0;
     int bytesCopied = Math.min(outbb.remaining(), len);
     outbb.put(buf, pos, bytesCopied);
     outbb.flip();

@@ -21,7 +21,7 @@ public class TransferServer extends FishThread {
     // default settings
     public static final long DEFAULT_SERVER_INTERVAL = 1000;
     
-    public static final long DEFAULT_WORKER_INTERVAL = 1;
+    public static final long DEFAULT_WORKER_INTERVAL = 500;
     public static final int DEFAULT_BUFFER_SZ = 65536;
 
     /**
