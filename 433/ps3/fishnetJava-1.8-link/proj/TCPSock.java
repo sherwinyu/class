@@ -203,18 +203,19 @@ public class TCPSock implements Debuggable {
     aa(this, sockType == SocketType.SENDER, "nonsender can't write");
     // load the payload
 
-    if (seqNum > sendBase + window) {
+    if (seqNum > (sendBase + sendWindow)) {
       return 0;
     }
 
     // payload = outbb.get( min(len, remaining() );
 
     // Payload is our actual payload.
-    byte[] payload; // has some length
-    tcpMan.sendData(this.tsid, Transport.DATA, seqNum, payload);
+    byte[] payload = new byte[] {}; // has some length TODO(syu)
+    Packet p = tcpMan.makePacket(tsid, Transport.DATA, seqNum, payload);
+    tcpMan.sendData(this.tsid, seqNum, p);
     seqNum += payload.length;
     outgoingPacketStatus.put(seqNum, false);
-    addTimer(1000, "sendData", new String[]{"TCPSockID", "int", "int", "[B"}, new Object[]{this.tsid, Transport.DATA, seqNum, payload});
+    // addTimer(1000, "sendData", new String[]{"TCPSockID", "int", "int", "[B"}, new Object[]{this.tsid, Transport.DATA, seqNum, payload});
 
 
   }
@@ -266,6 +267,10 @@ public class TCPSock implements Debuggable {
 
   public SocketType getSockType() {
     return this.sockType;
+  }
+
+  public int getSendBase() {
+    return sendBase;
   }
 
   public int getTransportSeqNum() {

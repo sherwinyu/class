@@ -120,17 +120,23 @@ public class TCPManager implements Debuggable {
    * @param p the Packet to be delivered to node.send()
    *
    * Only delivered if sendBase is less than seqNum, otherwise the to-be-sent packet has already been acked.
+   * sendBase is the seqnum of the last ACK received
+   * so for a packet to be sent, it's seqNum must be >= sendBase
    */
-  public void sendData(int remoteAddr, int lastSeqNum, Packet p) {
-    if sendBase < lastSeqNum
-    node.send(remoteAddr, p); 
+  public void sendData(TCPSockID tsid, int seqNum, Packet p) {
+    aa(this, sockSpace.containsKey(tsid), "attempting to send with nonexistent tsid");
+    TCPSock sock = getSockByTSID(tsid);
+    
+    if (seqNum >= sock.getSendBase()) 
+      node.send(tsid.getRemoteAddr(), p); 
   }
+
 
   public int window() {
     return 3;
   }
 
-  public Packet makePacket(TCPSockID, int type, int seqNum, byte[] payload) {
+  public Packet makePacket(TCPSockID tsid, int type, int seqNum, byte[] payload) {
     Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
     Packet p = new Packet(tsid.getRemoteAddr(), this.getAddr(), ttl(), Protocol.TRANSPORT_PKT, getPacketSeqNum(), t.pack());
     return p;
