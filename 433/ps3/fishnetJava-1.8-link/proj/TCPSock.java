@@ -207,6 +207,8 @@ public class TCPSock implements Debuggable {
       return 0;
     }
 
+    int bytesCopied = 0;
+
     // payload = outbb.get( min(len, remaining() );
 
     // Payload is our actual payload.
@@ -217,8 +219,9 @@ public class TCPSock implements Debuggable {
     outgoingPacketStatus.put(seqNum, false);
     // addTimer(1000, "sendData", new String[]{"TCPSockID", "int", "int", "[B"}, new Object[]{this.tsid, Transport.DATA, seqNum, payload});
 
+    return bytesCopied;
 
-  }
+   }
 
   /**
    * Read from the socket up to len bytes into the buffer buf starting at
