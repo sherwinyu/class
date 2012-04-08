@@ -1,4 +1,5 @@
 import java.util.*;
+import java.nio.*;
 
 import syu.*;
 import static syu.SU.*;
@@ -22,7 +23,7 @@ enum SocketType {
 }
 public class TCPSock implements Debuggable {
   public String id() {
-    return tcpMan.node.id() + "_TCPSock" + sockType +" " + getLocalPort();
+    return sockType + "(" + state + "  " + tsid.getLocalAddr() +":" + getLocalPort() + ")";
   }
   // TCP socket states
   enum State {
@@ -33,6 +34,8 @@ public class TCPSock implements Debuggable {
     ESTABLISHED,
     SHUTDOWN // close requested, FIN not sent (due to unsent data in queue)
   }
+
+  public int SEND_BUFFER_SIZE = 1000;
 
   // All sockets
   private State state;
@@ -45,7 +48,8 @@ public class TCPSock implements Debuggable {
   private int sendWindow;
   private int sendBase;
   private int seqNum;
-  private HashMap<Integer, Boolean> outgoingPacketStatus;
+  // private HashMap<Integer, Boolean> outgoingPacketStatus;
+  private ByteBuffer outbb;
 
   // Receive sockets
   private int recvBase;
@@ -61,8 +65,38 @@ public class TCPSock implements Debuggable {
     this.state = State.CLOSED;
     this.sockType = type;
 
-    this.seqNum = 555;
+    switch (sockType) {
+      case SENDER:
+        initSender();
+        break;
+      case RECEIVER:
+        initReceiver();
+        break;
+      case WELCOME:
+        initWelcome();
+        break;
 
+    }
+
+    this.seqNum = 0;
+
+  }
+
+  private void initSender() {
+    aa(this, sockType == SocketType.SENDER, "");
+    sendWindow = 10 * Transport.MAX_PAYLOAD_SIZE;
+    sendBase = 0;
+    seqNum = 0;
+    outbb = ByteBuffer.allocate(SEND_BUFFER_SIZE);
+  }
+
+  private void initReceiver() {
+    aa(this, sockType == SocketType.RECEIVER, "");
+    recvBase = 0;
+  }
+
+  private void initWelcome() {
+    aa(this, sockType == SocketType.WELCOME, "");
     this.welcomeQueue = null;
     this.backlog = -1;
   }
@@ -201,27 +235,42 @@ public class TCPSock implements Debuggable {
    */
   public int write(byte[] buf, int pos, int len) {
     aa(this, sockType == SocketType.SENDER, "nonsender can't write");
-    // load the payload
 
-    if (seqNum > (sendBase + sendWindow)) {
-      return 0;
+    // fill buffer
+    ppp("outbb size: " + outbb.capacity());
+    ppp("outbb limit: " + outbb.limit());
+    ppp("outbb remaining: " + outbb.remaining());
+    return 0;
+    int bytesCopied = Math.min(outbb.remaining(), len);
+    outbb.put(buf, pos, bytesCopied);
+    outbb.flip();
+
+    ppp("bytes copied: " + bytesCopied);
+
+    // read from buffer (to create packet) ONLY if we will actually send one
+    int payloadLength = Math.min(Transport.MAX_PAYLOAD_SIZE, outbb.limit());
+    if (this.seqNum + payloadLength <= sendBase + sendWindow) {
+      byte[] payload = new byte[payloadLength];
+      outbb.get(payload);
+      outbb.compact();
+
+      Transport t = makeTransport(Transport.DATA, seqNum, payload);
+      tcpMan.sendData(this.tsid, t);
+
+      p(this, "Write: converting to packet: " + TCPManager.bytesToString(payload));
+
+      // only increment the seqnum if a packet is sent
+      seqNum += payloadLength;
+      // TODO(syu):
+      // addTimer(1000, "sendData", new String[]{"TCPSockID", "int", "int", "[B"}, new Object[]{this.tsid, Transport.DATA, seqNum, payload});
+
     }
 
-    int bytesCopied = 0;
-
-    // payload = outbb.get( min(len, remaining() );
-
-    // Payload is our actual payload.
-    byte[] payload = new byte[] {}; // has some length TODO(syu)
-    Packet p = tcpMan.makePacket(tsid, Transport.DATA, seqNum, payload);
-    tcpMan.sendData(this.tsid, seqNum, p);
-    seqNum += payload.length;
-    outgoingPacketStatus.put(seqNum, false);
-    // addTimer(1000, "sendData", new String[]{"TCPSockID", "int", "int", "[B"}, new Object[]{this.tsid, Transport.DATA, seqNum, payload});
+    // outgoingPacketStatus.put(seqNum, false);
 
     return bytesCopied;
 
-   }
+  }
 
   /**
    * Read from the socket up to len bytes into the buffer buf starting at
@@ -247,6 +296,7 @@ public class TCPSock implements Debuggable {
   public void synAckReceived() {
     aa(this, isConnectionPending(), "synAckReceived by invalid state");
     this.state = State.ESTABLISHED;
+    p(this, "synAckReceived");
   }
 
   public void setTSID(TCPSockID tsid) {
@@ -286,4 +336,17 @@ public class TCPSock implements Debuggable {
   /*
    * End of socket API
    */
+
+  /** 
+   * Creates a transport packet with the specified parameters.
+   *
+   * @param type 
+   * @param seqNum sequnce number. Note that this is NOT the current seqnum of this socket!
+   * @param payload
+   */
+  public Transport makeTransport(int type, int seqNum, byte[] payload) {
+    Transport t = new Transport(this.tsid.getLocalPort(), this.tsid.getRemotePort(),
+        type, this.sendWindow, seqNum, payload);
+    return t;
+  }
 }

@@ -108,8 +108,12 @@ public class TCPManager implements Debuggable {
   } 
 
   public void send(TCPSockID tsid, int type, int seqNum, byte[] payload) {
-    Packet p = makePacket(tsid, type, seqNum, payload);
-    node.send(tsid.getRemoteAddr(), p);
+    Transport t = getSockByTSID(tsid).makeTransport(type, seqNum, payload);
+    send(tsid, t);
+  }
+
+  public void send(TCPSockID tsid, Transport t) {
+    node.sendSegment(tsid.getLocalAddr(), tsid.getRemoteAddr(), Protocol.TRANSPORT_PKT, t.pack());
   }
 
   /**
@@ -123,27 +127,31 @@ public class TCPManager implements Debuggable {
    * sendBase is the seqnum of the last ACK received
    * so for a packet to be sent, it's seqNum must be >= sendBase
    */
-  public void sendData(TCPSockID tsid, int seqNum, Packet p) {
+  public void sendData(TCPSockID tsid, Transport t) {
     aa(this, sockSpace.containsKey(tsid), "attempting to send with nonexistent tsid");
+
     TCPSock sock = getSockByTSID(tsid);
-    
-    if (seqNum >= sock.getSendBase()) 
-      node.send(tsid.getRemoteAddr(), p); 
+    p(sock, 2, "sending data: " + transportToString(t));
+
+    if (t.getSeqNum() >= sock.getSendBase())  {
+      node.sendSegment(tsid.getLocalAddr(), tsid.getRemoteAddr(),
+                       Protocol.TRANSPORT_PKT, t.pack());
+    }
+    else 
+      p(sock, 3, "packet not sent because ack received: seqNum (" + t.getSeqNum() + ") >= sendBase (" + sock.getSendBase() + ")");
   }
 
-
-  public int window() {
-    return 3;
+  public static String bytesToString(byte[] arr) {
+    String out = "";
+    for (byte b : arr) {
+      out += (int) b + "";
+    }
+    return out;
+  }
+  public static String transportToString(Transport t) {
+    return bytesToString(t.getPayload());
   }
 
-  public Packet makePacket(TCPSockID tsid, int type, int seqNum, byte[] payload) {
-    Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
-    Packet p = new Packet(tsid.getRemoteAddr(), this.getAddr(), ttl(), Protocol.TRANSPORT_PKT, getPacketSeqNum(), t.pack());
-    return p;
-  }
-  public int ttl() {
-    return 4;
-  }
 
 
   /**
@@ -173,10 +181,11 @@ public class TCPManager implements Debuggable {
     aa(this, sock.isConnectionPending() || sock.isConnected(), "ack received by invalid socket state");
 
     if (sock.isConnectionPending()) {
+      p(this, "sock is pending connection");
       sock.synAckReceived();
-    }
-
-    if (sock.isConnectionPending()) {
+    } 
+    else if (sock.isConnected()) {
+      p(this, "sock is established");
       sock.synAckReceived();
     }
 

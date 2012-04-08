@@ -1,7 +1,7 @@
 # Makefile for Fishnet
 
 JAVAC = javac
-FLAGS = -nowarn -g
+FLAGS = -nowarn -g -d out
 JAVA_FILES = $(wildcard lib/*.java) $(wildcard proj/*.java)
 
 .PHONY = all clean
