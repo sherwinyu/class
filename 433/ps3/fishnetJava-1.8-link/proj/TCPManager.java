@@ -113,9 +113,17 @@ public class TCPManager implements Debuggable {
     node.send(tsid.getRemoteAddr(), p);
    }
 
+  public void send(int remoteAddr, Packet p) {
+    node.send(remoteAddr, p); 
+  }
+
   public int window() {
     return 3;
   }
+
+  public Packet makePacket(TCPSockID, int type, int seqNum, byte[] payload)
+Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(), type, window(), seqNum, payload);
+    Packet p = new Packet(tsid.getRemoteAddr(), this.getAddr(), ttl(), Protocol.TRANSPORT_PKT, getPacketSeqNum(), t.pack());
   public int ttl() {
     return 4;
   }

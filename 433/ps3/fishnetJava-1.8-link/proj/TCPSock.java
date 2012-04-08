@@ -34,16 +34,25 @@ public class TCPSock implements Debuggable {
     SHUTDOWN // close requested, FIN not sent (due to unsent data in queue)
   }
 
-
+  // All sockets
   private State state;
   private SocketType sockType;
-
   private TCPManager tcpMan;
   private TCPSockID tsid;
 
+
+  // Send sockets
+  private int sendWindow;
+  private int sendBase;
+  private int seqNum;
+  private HashMap<Integer, Boolean> outgoingPacketStatus;
+
+  // Receive sockets
+  private int recvBase;
+
+  // WelcomeSocket
   private int backlog;
   private ArrayList<TCPSock> welcomeQueue;
-  private int seqNum;
 
   public TCPSock(TCPManager tcpMan, SocketType type) {
     this.tcpMan = tcpMan;
@@ -191,7 +200,23 @@ public class TCPSock implements Debuggable {
    *             than len; on failure, -1
    */
   public int write(byte[] buf, int pos, int len) {
-    return -1;
+    aa(this, sockType == SocketType.SENDER, "nonsender can't write");
+    // load the payload
+
+    if (seqNum > sendBase + window) {
+      return 0;
+    }
+
+    // payload = outbb.get( min(len, remaining() );
+
+    // Payload is our actual payload.
+    byte[] payload; // has some length
+    tcpMan.sendData(this.tsid, Transport.DATA, seqNum, payload);
+    seqNum += payload.length;
+    outgoingPacketStatus.put(seqNum, false);
+    addTimer(1000, "sendData", new String[]{"TCPSockID", "int", "int", "[B"}, new Object[]{this.tsid, Transport.DATA, seqNum, payload});
+
+
   }
 
   /**
