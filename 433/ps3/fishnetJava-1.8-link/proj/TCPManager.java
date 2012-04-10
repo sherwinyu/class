@@ -70,6 +70,11 @@ public class TCPManager implements Debuggable {
     sockSpace.put(tsid, sock);
   }
 
+  public void remove(TCPSockID tsid) {
+    if (sockSpace.containsKey(tsid))
+      sockSpace.remove(tsid);
+  }
+
   public void addWelcomeSocket(TCPSock sock) {
     aa(this, sock.getTCPManager() == this, "adding socket that isn't owned by me");
     aa(this, sock.isWelcome(), "adding non-welcome socket");
@@ -240,7 +245,7 @@ public class TCPManager implements Debuggable {
   public boolean handleFIN(TCPSockID tsid, Transport t) {
     TCPSock sock = getSockByTSID(tsid);
     if (sock != null) {
-      p(sock, 3, "FIN -> releasing"); 
+      p(sock, 3, "releasing"); 
       sock.release();
     }
     return true;

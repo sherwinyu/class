@@ -272,6 +272,8 @@ public class TCPSock implements Debuggable {
     // TODO(syu) send a FIN
     this.state = State.CLOSED;
     tcpMan.sendFIN(tsid);
+    if (isReceiver())
+      tcpMan.remove(tsid);
   }
 
   /**
