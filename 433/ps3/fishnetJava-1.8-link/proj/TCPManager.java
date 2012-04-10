@@ -71,10 +71,8 @@ public class TCPManager implements Debuggable {
   }
 
   public void addWelcomeSocket(TCPSock sock) {
-    if (sock.getTCPManager() != this) 
-      die(this, "adding socket that isn't owned by me");
-    if (sock.getSockType() != SocketType.WELCOME) 
-      die(this, "adding non-welcome socket");
+    aa(this, sock.getTCPManager() == this, "adding socket that isn't owned by me");
+    aa(this, sock.isWelcome(), "adding non-welcome socket");
     welcomeSocks.put(sock.getLocalPort(), sock);
     // add(new TCPSockID(addr, -1, sock.getLocalPort(), -1), sock);
   }
@@ -91,21 +89,32 @@ public class TCPManager implements Debuggable {
    *  2) add appropriate receiving socket to queue, with 4tuple set
    */
   public void sendSYN(TCPSockID tsid) {
-    p(this, "sending SYN " + tsid.id());
-    send(tsid, Transport.SYN, new byte[]{});
-  }
-  public void sendACK(TCPSockID tsid) {
-    p(this, "sending ACK " + tsid.id());
-    send(tsid, Transport.ACK, new byte[]{});
+    TCPSock sock = getSockByTSID(tsid);
+    p(sock, "sending SYN " + tsid.id());
+    ppt("S");
+    send(tsid, Transport.SYN, getSockByTSID(tsid).getTransportSeqNum(), new byte[]{});
   }
 
-  public void send(TCPSockID tsid, int type, byte[] payload) { 
-    // p(tsid, "is...?");
-    ppp("\nkeys:");
-    ppp("" + sockSpace.keySet());
-    aa(this, sockSpace.containsKey(tsid), "attempting to send with nonexistent tsid");
-    send(tsid, type, sockSpace.get(tsid).getTransportSeqNum(), payload);
-  } 
+  public void sendACK(TCPSockID tsid) {
+    TCPSock recvSock = getSockByTSID(tsid);
+    p(recvSock, 3, "sending ACK. ackNum: " + recvSock.getRecvBase() + tsid.id());
+    ppt("A");
+    send(tsid, Transport.ACK, recvSock.getRecvBase(), new byte[]{});
+  }
+
+  public void sendFIN(TCPSockID tsid) {
+    TCPSock sock = getSockByTSID(tsid);
+    if (sock != null)
+      p(sock, "sending FIN " + tsid.id());
+    ppt("F");
+    //send(tsid, Transport.FIN, 0, new byte[]{});
+
+    Transport t = new Transport(tsid.getLocalPort(), tsid.getRemotePort(),
+        Transport.FIN, 0, 0, new byte[]{});
+    send(tsid, t);
+    // node.sendSegment(tsid.getLocalAddr(), tsid.getRemoteAddr(), Protocol.TRANSPORT_PKT, t.pack());
+  }
+
 
   public void send(TCPSockID tsid, int type, int seqNum, byte[] payload) {
     Transport t = getSockByTSID(tsid).makeTransport(type, seqNum, payload);
@@ -128,22 +137,33 @@ public class TCPManager implements Debuggable {
    * so for a packet to be sent, it's seqNum must be >= sendBase
    */
   public void sendData(TCPSockID tsid, Transport t) {
-    aa(this, sockSpace.containsKey(tsid), "attempting to send with nonexistent tsid");
-
     TCPSock sock = getSockByTSID(tsid);
     p(sock, 2, "sending data: " + transportToString(t));
+    p(sock, 2, "sending datad: seqNum (" + t.getSeqNum() + ") sendBase (" + sock.getSendBase() + ")");
 
+    // only permit outgoing packets with sn >= sb
+    // because sb is last ack that was received (meaning receiver is expecting
+    // packet with sequence number == sb)
     if (t.getSeqNum() >= sock.getSendBase())  {
-      node.sendSegment(tsid.getLocalAddr(), tsid.getRemoteAddr(),
-          Protocol.TRANSPORT_PKT, t.pack());
+      ppt(t.getSeqNum() == sock.getTransportSeqNum() ? "." : "!");
+      send(tsid, t);
+      p(sock, 3, "timer added");
+      node.addSendDataTimer(expectedRTT(tsid), tsid, t);
     }
     else 
-      p(sock, 3, "packet not sent because ack received: seqNum (" + t.getSeqNum() + ") >= sendBase (" + sock.getSendBase() + ")");
+      p(sock, 5, "packet not sent because ack received: seqNum (" + t.getSeqNum() + ") >= sendBase (" + sock.getSendBase() + ")");
+  }
+
+  /**
+   * @return the expected RTT for this connection
+   */
+  private int expectedRTT(TCPSockID tsid) {
+    return 2000;
   }
 
   public static String bytesToString(byte[] arr) {
     String out = "";
-    int preview = 5;
+    int preview = 3;
 
     for (int i = 0; i < Math.min(preview, arr.length); i++)
       out += (int) arr[i] + " ";
@@ -151,7 +171,7 @@ public class TCPManager implements Debuggable {
     out += "... ";
 
     for (int i = 0; i < Math.min(preview, arr.length); i++) 
-      out += (int) arr[arr.length - i - 1] + " ";
+      out += (int) arr[arr.length + i - Math.min(preview, arr.length)] + " ";
     return out;
   }
 
@@ -170,37 +190,63 @@ public class TCPManager implements Debuggable {
    * if so, create new recvSock
    * add recvSock to queue of the welcomeSock
    */
-  public void handleSYN(TCPSockID tsid, Transport t) {
+  public boolean handleSYN(TCPSockID tsid, Transport t) {
     if (welcomeSocks.containsKey(tsid.getLocalPort())) {
-      p(this, 3, "local welcome port matched!");
-      TCPSock sock = welcomeSocks.get(tsid.getLocalPort());
+      p(this, 3, "syn matched on localPort: " + tsid.getLocalPort());
+      TCPSock welcomeSock = welcomeSocks.get(tsid.getLocalPort());
       TCPSock recvSock = socket(SocketType.RECEIVER);
       recvSock.setTSID(tsid);
-      sock.addRecievingSock(recvSock);
+      welcomeSock.addRecievingSock(recvSock);
+      return true;
     }
     else
-      p(this, 3, "rejecting SYN");
+      return false;
   }
 
-  public void handleACK(TCPSockID tsid) {
+  public boolean handleACK(TCPSockID tsid, Transport t) {
     TCPSock sock = getSockByTSID(tsid);
-    aa(this, sock.getSockType() == SocketType.SENDER, "ack received by non sender socket");
-    aa(this, sock.isConnectionPending() || sock.isConnected(), "ack received by invalid socket state");
+    if (sock == null)
+      return false;
+    aa(this, sock.isSender(), "ack received by non sender socket");
+    aa(this, sock.isConnectionPending() || sock.isConnected() || sock.isClosurePending(), "ack received by invalid socket state");
 
     if (sock.isConnectionPending()) {
-      p(this, "sock is pending connection");
+      p(this, 3, "synAck received");
       sock.synAckReceived();
+      return true;
     } 
-    else if (sock.isConnected()) {
-      p(this, "sock is established");
-      sock.synAckReceived();
+    else if (sock.isConnected() || sock.isClosurePending()) {
+      p(this, 3, "dataAck received... doing nothing for now");
+      sock.dataAckReceived(t);
+      return true;
     }
-
+    return false;
   }
 
-  /*
-   * End Socket API
-   */
+  public boolean handleDATA(TCPSockID tsid, Transport t) {
+    TCPSock sock = getSockByTSID(tsid);
+    if (sock == null)
+      return false;
+
+    if (!sock.isConnected())
+      return false;
+
+    aa(this, sock.isReceiver(), "DATA received by non receiver socket");
+    aa(this, sock.isConnected(),  "DATA received by invalid socket state");
+    sock.dataReceived(t);
+    return true;
+  }
+
+  public boolean handleFIN(TCPSockID tsid, Transport t) {
+    TCPSock sock = getSockByTSID(tsid);
+    if (sock != null) {
+      p(sock, 3, "FIN -> releasing"); 
+      sock.release();
+    }
+    return true;
+  }
+
+  /* * End Socket API */
 
   public int getAddr() {
     return this.node.getAddr();
@@ -213,10 +259,6 @@ public class TCPManager implements Debuggable {
   //TODO(syu): implement this
   public boolean isPortFree(int localPort) {
     return true;
-  }
-
-  public int getPacketSeqNum() {
-    return packetSeqNum++;
   }
 
 }

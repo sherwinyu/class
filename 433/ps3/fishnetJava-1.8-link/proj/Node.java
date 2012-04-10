@@ -198,35 +198,34 @@ public class Node implements Debuggable {
     logError("Unexpected Ping Reply from " + packet.getSrc() + ": " + payload);
   }
 
-//TODO(syu): implement this
   void receiveTransport(Packet p) {
     TCPSockID tsid = TCPSockID.fromIncomingPacket(p);
-    p(this, "received incoming (oriented locally) tsid: " + tsid.id());
     Transport t = Transport.unpack(p.getPayload());
 
-    if (t.getType() == Transport.SYN) {
-      p(this, 3, "SYN matched");
-      tcpMan.handleSYN(tsid, t);
+    boolean valid = true;
+    switch (t.getType()) {
+      case Transport.SYN:
+        p(this, 2, "SYN received " + tsid.id());
+        valid = tcpMan.handleSYN(tsid, t);
+        break;
+      case Transport.ACK:
+        p(this, 2, "ACK received " + tsid.id());
+        valid = tcpMan.handleACK(tsid, t);
+        break;
+      case Transport.DATA:
+        p(this, 2, "DATA received " + tsid.id());
+        valid = tcpMan.handleDATA(tsid, t);
+        break;
+      case Transport.FIN:
+        p(this, 2, "FIN received " + tsid.id());
+        valid = tcpMan.handleFIN(tsid, t);
+        break;
+    }
+    if (!valid) {
+      p(this, 3, "Rejecting.");
+      tcpMan.sendFIN(tsid);
     }
 
-    if (t.getType() == Transport.ACK) {
-      p(this, 3, "ACK matched");
-      tcpMan.handleACK(tsid);
-    }
-      
-/*
-    TCPSockID tsid = new TCPSockID(p);
-    if (this.tcpMan.connectionExists(tsid)) {
-      
-    }
-    else if 
-
-    cases:
-      full match, type == data AND state = established AND type == sending
-      tsid.remote matches node, type == syn
-      tsid.match, type == ack AND state = syn sent
-      tsid.match, type == ack AND state = established AND type == sending
-      */
   }
 
 
@@ -251,16 +250,18 @@ public class Node implements Debuggable {
     }
   }
 
-  private void addTcpManTimer(long deltaT, String methodName, String[] paramTypes, Object[] params) {
+  public void addSendDataTimer(long deltaT, TCPSockID tsid, Transport t) {
     try {
-      Method method = Callback.getMethod(methodName, tcpMan, paramTypes);
-      Callback cb = new Callback(method, tcpMan, params);
+      Method method = Callback.getMethod("sendData", tcpMan, new String[]{"TCPSockID", "Transport"});
+      Callback cb = new Callback(method, tcpMan, new Object[]{tsid, t});
       this.manager.addTimer(this.addr, deltaT, cb);
     } catch (Exception e) {
-      p("Failed to addTimer");
+      p("Failed to failed to addSendDataTimer");
       e.printStackTrace();
     }
-    
+  }
+  private void addTcpManTimer(long deltaT, String methodName, String[] paramTypes, Object[] params) {
+
   }
 
   // Fishnet reliable data transfer
@@ -330,7 +331,7 @@ public class Node implements Debuggable {
         TransferClient.DEFAULT_BUFFER_SZ;
 
       TCPSock sock = this.tcpMan.socket(SocketType.SENDER);
-      
+
       sock.bind(localPort);
       sock.connect(destAddr, port);
       TransferClient client = new
